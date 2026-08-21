@@ -1,0 +1,185 @@
+// BlackBox — yerel geliştirme şeması (SQLite).
+// İleride Supabase/Postgres'e taşınacak; tablo/ilişki yapısı buna göre tasarlandı.
+// Not: Prisma'nın SQLite connector'ı native enum desteklemiyor — rol/durum/tür alanları
+// String olarak tutulur, uygulama katmanında (src/lib/validation) zod ile doğrulanır.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile           Profile?
+  organizationUsers OrganizationUser[]
+  member            Member?
+}
+
+model Profile {
+  userId      String   @id
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName String
+  locale      String   @default("tr-TR")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  timezone  String   @default("Europe/Istanbul")
+  status    String   @default("active") // active | suspended
+  createdAt DateTime @default(now())
+
+  branches          Branch[]
+  organizationUsers OrganizationUser[]
+  members           Member[]
+  trainingSessions  TrainingSession[]
+}
+
+model Branch {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  slug           String
+  address        String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  members          Member[]
+  trainingSessions TrainingSession[]
+
+  @@unique([organizationId, slug])
+}
+
+// role: member | staff
+// status: invited | active | disabled
+model OrganizationUser {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, userId])
+}
+
+// status: lead | active | inactive | blocked
+model Member {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  homeBranchId   String?
+  homeBranch     Branch?  @relation(fields: [homeBranchId], references: [id])
+  userId         String?  @unique
+  user           User?    @relation(fields: [userId], references: [id])
+  memberNo       String
+  fullName       String
+  email          String?
+  phone          String?
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  checkIns            CheckIn[]
+  trainingLogs        TrainingLog[]
+  performanceSnapshots PerformanceSnapshot[]
+  pointEvents         PointEvent[]
+  badges              MemberBadge[]
+
+  @@unique([organizationId, memberNo])
+}
+
+// status: submitted | reviewed
+model CheckIn {
+  id             String   @id @default(cuid())
+  memberId       String
+  member         Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  weekStart      DateTime
+  answersJson    String // JSON.stringify({ trainingAdherence, sleepQuality, stressLevel, energyLevel, enjoyment, sorenessFlag, note })
+  status         String   @default("submitted")
+  createdAt      DateTime @default(now())
+  reviewedAt     DateTime?
+  reviewedByUserId String?
+
+  @@unique([memberId, weekStart])
+}
+
+// type: boks | kickbox | fight_prep | kondisyon
+model TrainingSession {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branchId       String?
+  branch         Branch?  @relation(fields: [branchId], references: [id])
+  type           String
+  scheduledAt    DateTime
+  coachUserId    String?
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  logs TrainingLog[]
+}
+
+model TrainingLog {
+  id              String   @id @default(cuid())
+  memberId        String
+  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  sessionId       String?
+  session         TrainingSession? @relation(fields: [sessionId], references: [id])
+  loggedAt        DateTime @default(now())
+  type            String // boks | kickbox | fight_prep | kondisyon (session yoksa serbest log)
+  durationMinutes Int
+  rounds          Int?
+  intensity       Int // RPE 1-10
+  notes           String?
+  createdByUserId String
+
+  @@index([memberId, loggedAt])
+}
+
+model PerformanceSnapshot {
+  id           String   @id @default(cuid())
+  memberId     String
+  member       Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  computedAt   DateTime @default(now())
+  scoresJson   String // JSON.stringify(MemberScorecard)
+  overallScore Int
+
+  @@index([memberId, computedAt])
+}
+
+model PointEvent {
+  id         String   @id @default(cuid())
+  memberId   String
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  action     String // checkin_submitted | training_logged | streak_bonus | ...
+  points     Int
+  occurredAt DateTime @default(now())
+
+  @@index([memberId, occurredAt])
+}
+
+model MemberBadge {
+  id         String   @id @default(cuid())
+  memberId   String
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  badgeKey   String
+  awardedAt  DateTime @default(now())
+
+  @@unique([memberId, badgeKey])
+}
