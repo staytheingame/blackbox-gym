@@ -1,15 +1,16 @@
-// BlackBox — yerel geliştirme şeması (SQLite).
-// İleride Supabase/Postgres'e taşınacak; tablo/ilişki yapısı buna göre tasarlandı.
-// Not: Prisma'nın SQLite connector'ı native enum desteklemiyor — rol/durum/tür alanları
-// String olarak tutulur, uygulama katmanında (src/lib/validation) zod ile doğrulanır.
+// BlackBox — Supabase Postgres şeması.
+// Not: Enum yerine bilinçli olarak String kullanılıyor (rol/durum/tür alanları) —
+// SQLite'tan taşınırken uygulama katmanındaki (src/lib/validation) zod doğrulaması
+// korunsun diye; enum'a geçiş ayrı bir migration'da yapılabilir.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -45,6 +46,9 @@ model Organization {
   organizationUsers OrganizationUser[]
   members           Member[]
   trainingSessions  TrainingSession[]
+  planTemplates     PlanTemplate[]
+  membershipPlans   MembershipPlan[]
+  trainingSlots     TrainingSlot[]
 }
 
 model Branch {
@@ -59,6 +63,7 @@ model Branch {
 
   members          Member[]
   trainingSessions TrainingSession[]
+  trainingSlots    TrainingSlot[]
 
   @@unique([organizationId, slug])
 }
@@ -100,6 +105,11 @@ model Member {
   performanceSnapshots PerformanceSnapshot[]
   pointEvents         PointEvent[]
   badges              MemberBadge[]
+  memberPlans         MemberPlan[]
+  subscriptions       MemberSubscription[]
+  weightEntries       WeightEntry[]
+  weightGoals         WeightGoal[]
+  slotBookings        SlotBooking[]
 
   @@unique([organizationId, memberNo])
 }
@@ -182,4 +192,229 @@ model MemberBadge {
   awardedAt  DateTime @default(now())
 
   @@unique([memberId, badgeKey])
+}
+
+// ─────────────────────────────────────────────────────────────
+// PLANLAR & PROGRAMIM
+// Antrenörün yazdığı şablon (PlanTemplate → PlanDay → PlanItem),
+// sporcuya atanınca "Programım" olur (MemberPlan → PlanCompletion).
+// Tamamen dövüş odaklı: round, teknik, ped, torba, sparring.
+// ─────────────────────────────────────────────────────────────
+
+// kind: antrenman | kondisyon
+// level: baslangic | orta | ileri
+model PlanTemplate {
+  id              String   @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  kind            String
+  level           String
+  weeks           Int      @default(4)
+  summary         String?
+  isActive        Boolean  @default(true)
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  days        PlanDay[]
+  assignments MemberPlan[]
+
+  @@index([organizationId, kind])
+}
+
+model PlanDay {
+  id           String   @id @default(cuid())
+  templateId   String
+  template     PlanTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  weekNumber   Int      // 1..weeks
+  dayOfWeek    Int      // 1 = Pazartesi … 7 = Pazar
+  focus        String   // "Ped & kombinasyon", "Sparring", "Aktif dinlenme"
+  notes        String?
+
+  items       PlanItem[]
+  completions PlanCompletion[]
+
+  @@unique([templateId, weekNumber, dayOfWeek])
+}
+
+// kind: teknik | torba | ped | sparring | kondisyon | kuvvet | esneme
+model PlanItem {
+  id              String   @id @default(cuid())
+  dayId           String
+  day             PlanDay  @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  position        Int      // gün içindeki sıra
+  kind            String
+  label           String
+  /// src/data/techniques.ts içindeki teknik slug'ı (varsa)
+  techniqueSlug   String?
+  rounds          Int?
+  durationSeconds Int?
+  restSeconds     Int?
+  targetRpe       Int?
+  notes           String?
+
+  @@index([dayId, position])
+}
+
+// status: aktif | tamamlandi | iptal
+model MemberPlan {
+  id               String   @id @default(cuid())
+  memberId         String
+  member           Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  templateId       String
+  template         PlanTemplate @relation(fields: [templateId], references: [id])
+  startDate        DateTime // haftanın Pazartesi'si (UTC)
+  status           String   @default("aktif")
+  assignedByUserId String?
+  createdAt        DateTime @default(now())
+
+  completions PlanCompletion[]
+
+  @@index([memberId, status])
+}
+
+model PlanCompletion {
+  id            String   @id @default(cuid())
+  memberPlanId  String
+  memberPlan    MemberPlan @relation(fields: [memberPlanId], references: [id], onDelete: Cascade)
+  dayId         String
+  day           PlanDay  @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  completedAt   DateTime @default(now())
+  trainingLogId String?
+
+  @@unique([memberPlanId, dayId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// ÜYELİK & TARTI / SIKLET
+// ─────────────────────────────────────────────────────────────
+
+model MembershipPlan {
+  id              String   @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  /// Kuruş cinsinden. Paket tanımının bir parçası — uygulamada ödeme/tahsilat
+  /// takibi YOK, bu alan yalnız "paket ne kadar" bilgisidir.
+  priceMinor      Int
+  currency        String   @default("TRY")
+  /// Paketin geçerlilik süresi (gün).
+  durationDays    Int
+  /// Pakette kaç ders var. `null` = sınırsız (süre boyunca serbest).
+  totalSessions   Int?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  subscriptions MemberSubscription[]
+
+  @@index([organizationId, isActive])
+}
+
+// status: aktif | bitti | donduruldu | iptal
+model MemberSubscription {
+  id         String   @id @default(cuid())
+  memberId   String
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  planId     String
+  plan       MembershipPlan @relation(fields: [planId], references: [id])
+  startDate  DateTime
+  endDate    DateTime
+  status     String   @default("aktif")
+  /// Satın alındığı andaki ders adedi — paket sonradan değişirse geçmiş
+  /// abonelikler etkilenmesin diye kopyalanır. `null` = sınırsız.
+  sessionsTotal Int?
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([memberId, status])
+  @@index([endDate])
+}
+
+// ─────────────────────────────────────────────────────────────
+// DERS PROGRAMI — antrenörün açtığı saatler ve rezervasyonlar
+//
+// Sabit haftalık ders takvimi yok: antrenör boş saatlerini yayımlar,
+// sporcular ortak tablodan istediğini kapar. Slot varsayılan olarak
+// birebirdir (`capacity = 1`); ikinci kişi katılmak isterse istek
+// "bekliyor" olarak düşer, antrenör onaylarsa kontenjan artar ve seans
+// grup dersine döner.
+// ─────────────────────────────────────────────────────────────
+
+// kind: boks | kickbox | fight_prep | kondisyon | teknik
+// status: acik | iptal | tamamlandi
+model TrainingSlot {
+  id              String   @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branchId        String?
+  branch          Branch?  @relation(fields: [branchId], references: [id])
+  coachUserId     String
+  startsAt        DateTime
+  durationMinutes Int      @default(60)
+  /// Kaç sporcu alabilir. 1 = birebir; antrenör onayıyla artar.
+  capacity        Int      @default(1)
+  kind            String
+  title           String?
+  notes           String?
+  status          String   @default("acik")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  bookings SlotBooking[]
+
+  @@index([organizationId, startsAt])
+  @@index([status, startsAt])
+}
+
+// status: onayli   — yeri ayrıldı
+//         bekliyor — dolu slota grup katılım isteği, antrenör onayı bekler
+//         reddedildi | iptal
+//         katildi | gelmedi — seans sonrası yoklama
+model SlotBooking {
+  id              String   @id @default(cuid())
+  slotId          String
+  slot            TrainingSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  memberId        String
+  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  status          String   @default("onayli")
+  note            String?
+  createdAt       DateTime @default(now())
+  decidedAt       DateTime?
+  decidedByUserId String?
+  /// Katılım işaretlenince oluşan antrenman kaydı — geri alınırsa silinir.
+  trainingLogId   String?
+
+  @@unique([slotId, memberId])
+  @@index([memberId, status])
+  @@index([status])
+}
+
+model WeightEntry {
+  id               String   @id @default(cuid())
+  memberId         String
+  member           Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  takenAt          DateTime @default(now())
+  weightKg         Float
+  bodyFatPercent   Float?
+  note             String?
+  recordedByUserId String?
+
+  @@index([memberId, takenAt])
+}
+
+// status: aktif | ulasildi | iptal
+model WeightGoal {
+  id          String   @id @default(cuid())
+  memberId    String
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  targetKg    Float
+  /// src/data/weight-classes.ts içindeki sıklet slug'ı
+  weightClass String?
+  fightDate   DateTime?
+  status      String   @default("aktif")
+  createdAt   DateTime @default(now())
+
+  @@index([memberId, status])
 }

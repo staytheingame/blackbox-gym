@@ -4,6 +4,11 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, getCurrentMember } from "@/lib/auth/guards";
 import { logTraining } from "@/lib/queries/performance";
+import {
+  completePlanDay,
+  memberOwnsPlan,
+  uncompletePlanDay,
+} from "@/lib/queries/plans";
 
 const logSchema = z.object({
   type: z.enum(["boks", "kickbox", "fight_prep", "kondisyon"]),
@@ -43,4 +48,36 @@ export async function logTrainingAction(
   revalidatePath("/uye");
   revalidatePath("/uye/lig");
   return { success: true };
+}
+
+/**
+ * Program gününü tamamlandı/geri al. Yetki: plan gerçekten bu üyeye mi ait
+ * (`memberOwnsPlan`) — "formda id vardı" güvenlik sayılmaz.
+ *
+ * Tamamlama o günün planından bir antrenman kaydı üretir (puan + rozet);
+ * geri alma kaydı siler ve puanı ters kayıtla iade eder.
+ */
+export async function togglePlanDayAction(
+  memberPlanId: string,
+  dayId: string,
+  completed: boolean,
+): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) return;
+  const member = await getCurrentMember(user.id);
+  if (!member) return;
+
+  const owns = await memberOwnsPlan(member.id, memberPlanId);
+  if (!owns) return;
+
+  if (completed) {
+    await uncompletePlanDay(member.id, memberPlanId, dayId);
+  } else {
+    await completePlanDay(member.id, memberPlanId, dayId, user.id);
+  }
+
+  revalidatePath("/uye/antrenman");
+  revalidatePath("/uye/kondisyon");
+  revalidatePath("/uye");
+  revalidatePath("/uye/lig");
 }

@@ -1,13 +1,25 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { PageHero } from "@/components/ui/PageHero";
 import { getCurrentMember, getCurrentUser } from "@/lib/auth/guards";
 import { getTrainingLogs } from "@/lib/queries/performance";
+import { PLAN_LEVEL_LABEL, getActiveMemberPlan } from "@/lib/queries/plans";
 import { formatDateTR } from "@/lib/date";
+import {
+  EmptyState,
+  PanelCard,
+  PanelPage,
+  Pill,
+} from "@/components/panel/ui";
+import {
+  PlanFinishedNotice,
+  PlanWeekDays,
+  PlanWeekStats,
+} from "@/components/panel/PlanWeek";
 import { TrainingLogForm } from "./TrainingLogForm";
+import { togglePlanDayAction } from "./actions";
 
 export const metadata: Metadata = {
-  title: "Antrenman — BlackBox",
+  title: "Programım — BlackBox Panel",
 };
 
 const typeLabels: Record<string, string> = {
@@ -23,39 +35,55 @@ export default async function TrainingLogPage() {
   const member = await getCurrentMember(user.id);
   if (!member) redirect("/giris");
 
-  const logs = await getTrainingLogs(member.id);
+  const [logs, plan] = await Promise.all([
+    getTrainingLogs(member.id),
+    getActiveMemberPlan(member.id, "antrenman"),
+  ]);
 
   return (
-    <div>
-      <PageHero
-        eyebrow="Antrenman"
-        title="Antrenman Geçmişin"
-        description="Yeni bir antrenman logla veya geçmiş kayıtlarını gör."
-      />
-      <section className="mx-auto max-w-3xl space-y-10 px-4 py-14 sm:px-6">
-        <div className="rounded-sm border border-brand-border bg-brand-surface p-6">
-          <h2 className="font-display text-lg uppercase tracking-wide text-brand-yellow">
-            Yeni Kayıt
-          </h2>
-          <div className="mt-4">
-            <TrainingLogForm />
+    <PanelPage
+      title="Programım"
+      description="Antrenörünün atadığı haftalık program ve antrenman geçmişin."
+      action={
+        plan ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Pill tone="yellow">
+              {plan.currentWeek}. hafta / {plan.totalWeeks}
+            </Pill>
+            <Pill>{PLAN_LEVEL_LABEL[plan.level] ?? plan.level}</Pill>
           </div>
-        </div>
+        ) : undefined
+      }
+    >
+      {plan ? (
+        <>
+          <PlanWeekStats plan={plan} />
+          {plan.finished && <PlanFinishedNotice />}
+          <PlanWeekDays plan={plan} toggleDay={togglePlanDayAction} />
+        </>
+      ) : (
+        <PanelCard title="Program">
+          <EmptyState>
+            Sana henüz program atanmadı — antrenörün Planlar bölümünden bir
+            şablon atadığında bu ekran dolacak.
+          </EmptyState>
+        </PanelCard>
+      )}
 
-        <div>
-          <h2 className="font-display text-lg uppercase tracking-wide text-brand-yellow">
-            Geçmiş
-          </h2>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        <PanelCard title="Yeni Kayıt">
+          <TrainingLogForm />
+        </PanelCard>
+
+        <PanelCard title={`Geçmiş (${logs.length})`}>
           {logs.length === 0 ? (
-            <p className="mt-3 text-sm text-brand-muted">
-              Henüz antrenman kaydın yok.
-            </p>
+            <EmptyState>Henüz antrenman kaydın yok.</EmptyState>
           ) : (
-            <ul className="mt-4 divide-y divide-brand-border rounded-sm border border-brand-border bg-brand-surface">
+            <ul className="divide-y divide-brand-border">
               {logs.map((log) => (
                 <li
                   key={log.id}
-                  className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
+                  className="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0"
                 >
                   <div>
                     <span className="text-sm font-semibold text-brand-white">
@@ -74,8 +102,8 @@ export default async function TrainingLogPage() {
               ))}
             </ul>
           )}
-        </div>
-      </section>
-    </div>
+        </PanelCard>
+      </div>
+    </PanelPage>
   );
 }

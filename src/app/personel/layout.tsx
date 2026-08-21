@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PanelShell } from "@/components/panel/PanelShell";
 import { getCurrentUser, requireOrganizationMembership } from "@/lib/auth/guards";
-import { logoutAction } from "@/lib/auth/actions";
+import { fetchStaffBadges } from "@/lib/queries/nav-badges";
 
 export default async function StaffLayout({
   children,
@@ -19,30 +19,15 @@ export default async function StaffLayout({
     redirect("/uye");
   }
 
+  const badges = await fetchStaffBadges(membership.organizationId);
+
   return (
-    <div>
-      <div className="border-b border-brand-border bg-brand-ink">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <Link
-            href="/personel"
-            className="text-xs font-bold uppercase tracking-wide text-brand-muted hover:text-brand-yellow"
-          >
-            Üyeler
-          </Link>
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-brand-muted">{user.displayName}</span>
-            <form action={logoutAction}>
-              <button
-                type="submit"
-                className="text-xs font-bold uppercase tracking-wide text-brand-muted hover:text-brand-yellow"
-              >
-                Çıkış
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
+    <PanelShell
+      role="staff"
+      user={{ name: user.displayName, subtitle: user.email }}
+      badges={badges}
+    >
       {children}
-    </div>
+    </PanelShell>
   );
 }

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { pointsForCheckIn, pointsForTrainingLog } from "./points";
+import {
+  pointsForCheckIn,
+  pointsForTrainingLog,
+  pointsForTrainingRevert,
+} from "./points";
 
 describe("pointsForCheckIn", () => {
   it("normal skorda yalnız temel puanı verir", () => {
@@ -28,5 +32,17 @@ describe("pointsForTrainingLog", () => {
     expect(pointsForTrainingLog()).toEqual([
       { action: "training_logged", points: 5 },
     ]);
+  });
+});
+
+describe("pointsForTrainingRevert", () => {
+  it("verilen puanı tam olarak sıfırlar", () => {
+    const given = pointsForTrainingLog()[0].points;
+    const taken = pointsForTrainingRevert()[0].points;
+    expect(given + taken).toBe(0);
+  });
+
+  it("ters kaydı ayrı bir eylem adıyla yazar", () => {
+    expect(pointsForTrainingRevert()[0].action).toBe("training_reverted");
   });
 });

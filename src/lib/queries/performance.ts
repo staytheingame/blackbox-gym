@@ -3,7 +3,11 @@ import { prisma } from "@/lib/db";
 import { getWeekStart } from "@/lib/date";
 import { computeMemberScorecard } from "@/domain/performance/scorecard";
 import type { CheckInAnswers, CheckInRecord } from "@/domain/performance/types";
-import { pointsForCheckIn, pointsForTrainingLog } from "@/domain/gamification/points";
+import {
+  pointsForCheckIn,
+  pointsForTrainingLog,
+  pointsForTrainingRevert,
+} from "@/domain/gamification/points";
 import { evaluateNewBadges, type BadgeKey } from "@/domain/gamification/badges";
 
 export async function getCheckInHistory(memberId: string): Promise<CheckInRecord[]> {
@@ -49,6 +53,17 @@ export async function getPointsTotal(memberId: string): Promise<number> {
     _sum: { points: true },
   });
   return result._sum.points ?? 0;
+}
+
+/** Performans kartı geçmişi — gelişim grafiğinin kaynağı. */
+export async function getScoreHistory(memberId: string, limit = 24) {
+  const rows = await prisma.performanceSnapshot.findMany({
+    where: { memberId },
+    orderBy: { computedAt: "desc" },
+    take: limit,
+    select: { computedAt: true, overallScore: true },
+  });
+  return rows.reverse();
 }
 
 export async function getBadgeKeys(memberId: string): Promise<BadgeKey[]> {
@@ -142,12 +157,14 @@ export async function getTrainingLogs(memberId: string) {
   });
 }
 
+/** Antrenman kaydı + puan + rozet. Oluşan kaydın id'sini döner (program
+ * günü tamamlamada `PlanCompletion.trainingLogId`'ye bağlanır). */
 export async function logTraining(
   memberId: string,
   input: TrainingLogInput,
   createdByUserId: string,
-): Promise<void> {
-  await prisma.trainingLog.create({
+): Promise<string> {
+  const log = await prisma.trainingLog.create({
     data: {
       memberId,
       type: input.type,
@@ -185,6 +202,33 @@ export async function logTraining(
     alreadyAwarded,
   });
   await awardBadges(memberId, newBadges);
+
+  return log.id;
+}
+
+/**
+ * Otomatik oluşmuş bir antrenman kaydını geri alır (program günü işareti
+ * kaldırıldığında). Kayıt silinir, puan ters kayıtla iade edilir.
+ * Kazanılmış rozetler geri alınmaz — bilinçli: rozet bir kere hak edilir.
+ */
+export async function revertTrainingLog(
+  memberId: string,
+  trainingLogId: string,
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const deleted = await tx.trainingLog.deleteMany({
+      where: { id: trainingLogId, memberId },
+    });
+    if (deleted.count === 0) return;
+
+    await tx.pointEvent.createMany({
+      data: pointsForTrainingRevert().map((event) => ({
+        memberId,
+        action: event.action,
+        points: event.points,
+      })),
+    });
+  });
 }
 
 export type LeaderboardEntry = {

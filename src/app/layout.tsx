@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { Inter, Oswald } from "next/font/google";
-import { Header } from "@/components/app-shell/Header";
-import { Footer } from "@/components/app-shell/Footer";
 import "./globals.css";
 
 const sans = Inter({
@@ -21,16 +19,21 @@ export const metadata: Metadata = {
     "BlackBox, boks ve fight sporlarına odaklanan salon. Üyelik planları, antrenman programları, ekipman ve ders takvimi.",
 };
 
+/**
+ * Kök layout yalnız `<html>/<body>` ve fontları kurar.
+ *
+ * Tanıtım sitesinin Header/Footer'ı `(site)/layout.tsx`'e taşındı: panel
+ * rotaları (`/uye`, `/personel`) ve giriş ekranı kendi kabuğunu kuruyor,
+ * pazarlama başlığının içinde açılmıyor.
+ */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="tr"
       className={`${sans.variable} ${display.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-brand-black text-brand-white">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+      <body className="min-h-full bg-brand-black text-brand-white">
+        {children}
       </body>
     </html>
   );

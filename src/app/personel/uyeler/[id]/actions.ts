@@ -8,7 +8,7 @@ import {
   requireStaffScopeForMember,
 } from "@/lib/auth/guards";
 import { logTraining } from "@/lib/queries/performance";
-import { reviewCheckIn } from "@/lib/queries/staff";
+import { assignPlanToMember } from "@/lib/queries/plans";
 
 const logSchema = z.object({
   memberId: z.string().min(1),
@@ -50,16 +50,41 @@ export async function logTrainingForMemberAction(
   return { success: true };
 }
 
-export async function reviewCheckInAction(
-  checkInId: string,
-  memberId: string,
-): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) return;
-  const membership = await requireStaff(user.id).catch(() => null);
-  if (!membership) return;
 
-  await requireStaffScopeForMember(membership.organizationId, memberId);
-  await reviewCheckIn(checkInId, user.id);
-  revalidatePath(`/personel/uyeler/${memberId}`);
+const assignSchema = z.object({
+  memberId: z.string().min(1),
+  templateId: z.string().min(1),
+});
+
+export type AssignPlanState = { error?: string; success?: string };
+
+/** Şablonu sporcuya atar — aynı anda tek aktif program olur. */
+export async function assignPlanAction(
+  _prevState: AssignPlanState,
+  formData: FormData,
+): Promise<AssignPlanState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Oturum açılmamış." };
+  const membership = await requireStaff(user.id).catch(() => null);
+  if (!membership) return { error: "Personel yetkisi gerekli." };
+
+  const parsed = assignSchema.safeParse({
+    memberId: formData.get("memberId"),
+    templateId: formData.get("templateId"),
+  });
+  if (!parsed.success) return { error: "Şablon seçilmedi." };
+
+  await requireStaffScopeForMember(membership.organizationId, parsed.data.memberId);
+
+  const result = await assignPlanToMember(
+    parsed.data.memberId,
+    parsed.data.templateId,
+    user.id,
+  );
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath(`/personel/uyeler/${parsed.data.memberId}`);
+  revalidatePath("/personel/planlar");
+  revalidatePath("/uye/antrenman");
+  return { success: "Program atandı." };
 }

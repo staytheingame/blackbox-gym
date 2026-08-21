@@ -43,7 +43,13 @@ export function Header() {
           })}
         </nav>
 
-        <div className="hidden md:block">
+        <div className="hidden items-center gap-4 md:flex">
+          <Link
+            href="/giris"
+            className="text-sm font-semibold uppercase tracking-wide text-brand-muted transition-colors hover:text-brand-yellow"
+          >
+            Giriş
+          </Link>
           <Link
             href={ctaNav.href}
             className="rounded-sm bg-brand-yellow px-4 py-2 text-sm font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white"
@@ -103,6 +109,15 @@ export function Header() {
                 </li>
               );
             })}
+            <li>
+              <Link
+                href="/giris"
+                onClick={() => setOpen(false)}
+                className="block rounded-sm px-2 py-3 text-base font-semibold uppercase tracking-wide text-brand-muted hover:text-brand-yellow"
+              >
+                Giriş
+              </Link>
+            </li>
             <li className="pt-3">
               <Link
                 href={ctaNav.href}

@@ -1,7 +1,17 @@
+/**
+ * Public tanıtım sitesindeki paket vitrini.
+ *
+ * Panel tarafındaki gerçek paketler veritabanında (`MembershipPlan`) durur;
+ * burası yalnız pazarlama metnidir. İkisi **aynı modeli** anlatmalı: BlackBox
+ * üyeliği bir **ders paketi**dir — kaç ders, ne kadar sürede kullanılacak.
+ * Fiyat/ders adedi değişirse iki tarafı birlikte güncelle.
+ */
 export type MembershipPlan = {
   slug: string;
   name: string;
   durationLabel: string;
+  /** Pakette kaç ders var; `null` = sınırsız. */
+  sessions: number | null;
   price: number;
   currency: "TRY";
   highlight?: boolean;
@@ -10,56 +20,60 @@ export type MembershipPlan = {
 
 export const membershipPlans: MembershipPlan[] = [
   {
-    slug: "aylik",
-    name: "Aylık",
-    durationLabel: "1 Ay",
-    price: 1800,
+    slug: "8-ders",
+    name: "8 Derslik Başlangıç",
+    durationLabel: "45 gün içinde",
+    sessions: 8,
+    price: 1600,
     currency: "TRY",
     perks: [
-      "Sınırsız salon girişi",
-      "Boks & fight grup dersleri",
+      "Haftada iki ders temposu",
+      "Birebir ya da grup — fark etmez",
+      "Antrenörün açık saatlerinden kendin seç",
       "Ekipman kullanımı (torba, ring, ped)",
-      "Soyunma odası ve duş",
     ],
   },
   {
-    slug: "3-aylik",
-    name: "3 Aylık",
-    durationLabel: "3 Ay",
-    price: 4800,
+    slug: "16-ders",
+    name: "16 Derslik Standart",
+    durationLabel: "60 gün içinde",
+    sessions: 16,
+    price: 2800,
     currency: "TRY",
     highlight: true,
     perks: [
-      "Aylık pakete ait her şey",
-      "Haftada 1 kişisel antrenman seansı",
-      "Antrenman planı takibi",
-      "1 kez dondurma hakkı",
+      "Başlangıç paketindeki her şey",
+      "Kişisel antrenman programı takibi",
+      "Haftalık kontrol ve performans kartı",
+      "Tartı & sıklet takibi",
     ],
   },
   {
-    slug: "6-aylik",
-    name: "6 Aylık",
-    durationLabel: "6 Ay",
-    price: 8700,
+    slug: "24-ders",
+    name: "24 Derslik Maç Kampı",
+    durationLabel: "90 gün içinde",
+    sessions: 24,
+    price: 6500,
     currency: "TRY",
     perks: [
-      "3 aylık pakete ait her şey",
-      "Sparring seanslarına öncelikli katılım",
-      "Beslenme yönlendirme notları",
-      "2 kez dondurma hakkı",
+      "Standart paketteki her şey",
+      "Maç kampı protokolü ve sparring geceleri",
+      "Kamp boyunca sıklet planlaması",
+      "Ring formu analizi (dövüş analitiği)",
     ],
   },
   {
-    slug: "yillik",
-    name: "Yıllık",
-    durationLabel: "12 Ay",
-    price: 15600,
+    slug: "aylik-sinirsiz",
+    name: "Aylık Sınırsız",
+    durationLabel: "30 gün",
+    sessions: null,
+    price: 3200,
     currency: "TRY",
     perks: [
-      "6 aylık pakete ait her şey",
-      "Yılda 4 kez dondurma hakkı",
-      "Fight-prep kampı önceliği",
-      "Misafir davet hakkı (ayda 1)",
+      "Ders sınırı yok",
+      "Açık olan her saate rezervasyon",
+      "Grup derslerine katılım önceliği",
+      "Tüm takip ekranları dahil",
     ],
   },
 ];

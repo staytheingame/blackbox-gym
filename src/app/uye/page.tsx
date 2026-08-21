@@ -1,14 +1,38 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentMember, getCurrentUser } from "@/lib/auth/guards";
 import {
+  getCurrentMember,
+  getCurrentUser,
+  requireOrganizationMembership,
+} from "@/lib/auth/guards";
+import {
+  countConsecutiveWeeks,
+  getBadgeKeys,
   getCheckInHistory,
+  getLeaderboard,
   getMemberScorecard,
   getPointsTotal,
-  getBadgeKeys,
+  getTrainingLogs,
 } from "@/lib/queries/performance";
-import { getWeekStart } from "@/lib/date";
+import { formatDateTR, getWeekStart } from "@/lib/date";
 import { BADGE_DEFINITIONS } from "@/domain/gamification/badges";
+import {
+  EmptyState,
+  PanelCard,
+  PanelPage,
+  Pill,
+  StatCard,
+} from "@/components/panel/ui";
+
+export const metadata: Metadata = { title: "Özet — BlackBox Panel" };
+
+const typeLabels: Record<string, string> = {
+  boks: "Boks",
+  kickbox: "Kickbox",
+  fight_prep: "Fight Prep",
+  kondisyon: "Kondisyon",
+};
 
 export default async function MemberDashboardPage() {
   const user = await getCurrentUser();
@@ -16,94 +40,152 @@ export default async function MemberDashboardPage() {
   const member = await getCurrentMember(user.id);
   if (!member) redirect("/giris");
 
-  const [history, scorecard, points, badgeKeys] = await Promise.all([
-    getCheckInHistory(member.id),
-    getMemberScorecard(member.id),
-    getPointsTotal(member.id),
-    getBadgeKeys(member.id),
-  ]);
+  const membership = await requireOrganizationMembership(user.id);
+
+  const [history, scorecard, points, badgeKeys, logs, leaderboard] =
+    await Promise.all([
+      getCheckInHistory(member.id),
+      getMemberScorecard(member.id),
+      getPointsTotal(member.id),
+      getBadgeKeys(member.id),
+      getTrainingLogs(member.id),
+      getLeaderboard(membership.organizationId),
+    ]);
 
   const thisWeek = getWeekStart(new Date()).toISOString().slice(0, 10);
   const submittedThisWeek = history.some((h) => h.weekStart === thisWeek);
+  const streak = countConsecutiveWeeks(history);
+  const rankIndex = leaderboard.findIndex((e) => e.memberId === member.id);
+  const recentLogs = logs.slice(0, 5);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <h1 className="font-display text-3xl uppercase tracking-wide text-brand-white">
-        Hoş geldin, {member.fullName}
-      </h1>
-
-      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Genel Skor" value={scorecard.overallScore} suffix="/ 100" />
-        <StatCard label="Toplam Puan" value={points} />
-        <StatCard label="Rozet" value={badgeKeys.length} />
+    <PanelPage
+      title={`Hoş geldin, ${member.fullName.split(" ")[0]}`}
+      description="Bu haftanın durumu, performans skorun ve son antrenmanların."
+      action={
+        <div className="flex flex-wrap items-center gap-2">
+          <Pill>{member.memberNo}</Pill>
+          <Pill tone={member.status === "active" ? "yellow" : "neutral"}>
+            {member.status === "active" ? "Aktif üyelik" : member.status}
+          </Pill>
+        </div>
+      }
+    >
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Bu Hafta Check-in"
-          value={submittedThisWeek ? "Gönderildi" : "Bekliyor"}
+          label="Genel Skor"
+          value={scorecard.overallScore}
+          suffix="/ 100"
+          hint={
+            scorecard.trend === "new"
+              ? "İlk check-in'ini bekliyoruz"
+              : `Trend: ${scorecard.trendDelta >= 0 ? "+" : ""}${scorecard.trendDelta}`
+          }
+        />
+        <StatCard label="Toplam Puan" value={points} hint={`${badgeKeys.length} rozet`} />
+        <StatCard
+          label="Lig Sırası"
+          value={rankIndex >= 0 ? `#${rankIndex + 1}` : "—"}
+          hint={`${leaderboard.length} üye arasında`}
+        />
+        <StatCard
+          label="Check-in Serisi"
+          value={streak}
+          suffix="hafta"
+          hint={submittedThisWeek ? "Bu hafta gönderildi" : "Bu hafta bekliyor"}
           highlight={!submittedThisWeek}
         />
       </div>
 
       {!submittedThisWeek && (
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-sm border border-brand-yellow bg-brand-surface-2 p-5">
-          <p className="text-sm text-brand-white">
-            Bu haftanın check-in&apos;ini henüz göndermedin.
-          </p>
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-sm border border-brand-yellow bg-brand-surface-2 p-5">
+          <div>
+            <p className="text-sm font-semibold text-brand-white">
+              Bu haftanın check-in&apos;i bekliyor.
+            </p>
+            <p className="mt-1 text-xs text-brand-muted">
+              5 soruluk form performans kartını ve puanını günceller.
+            </p>
+          </div>
           <Link
             href="/uye/check-in"
-            className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black hover:bg-brand-white"
+            className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white"
           >
             Check-in Gönder
           </Link>
         </div>
       )}
 
-      {badgeKeys.length > 0 && (
-        <div className="mt-8">
-          <h2 className="font-display text-lg uppercase tracking-wide text-brand-yellow">
-            Rozetlerin
-          </h2>
-          <div className="mt-3 flex flex-wrap gap-3">
-            {badgeKeys.map((key) => (
-              <span
-                key={key}
-                title={BADGE_DEFINITIONS[key].description}
-                className="rounded-sm border border-brand-border bg-brand-surface px-3 py-2 text-xs font-semibold text-brand-white"
-              >
-                {BADGE_DEFINITIONS[key].name}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <PanelCard
+          title="Son Antrenmanlar"
+          action={
+            <Link
+              href="/uye/antrenman"
+              className="text-xs font-bold uppercase tracking-wide text-brand-yellow hover:text-brand-white"
+            >
+              Tümü
+            </Link>
+          }
+        >
+          {recentLogs.length === 0 ? (
+            <EmptyState>Henüz antrenman kaydın yok.</EmptyState>
+          ) : (
+            <ul className="divide-y divide-brand-border">
+              {recentLogs.map((log) => (
+                <li
+                  key={log.id}
+                  className="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0"
+                >
+                  <div>
+                    <div className="text-sm font-semibold text-brand-white">
+                      {typeLabels[log.type] ?? log.type}
+                    </div>
+                    <div className="text-xs text-brand-muted">
+                      {formatDateTR(log.loggedAt)}
+                    </div>
+                  </div>
+                  <div className="text-xs text-brand-muted">
+                    {log.durationMinutes} dk
+                    {log.rounds ? ` · ${log.rounds} round` : ""} · RPE{" "}
+                    {log.intensity}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </PanelCard>
 
-function StatCard({
-  label,
-  value,
-  suffix,
-  highlight,
-}: {
-  label: string;
-  value: string | number;
-  suffix?: string;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-sm border p-5 ${
-        highlight
-          ? "border-brand-yellow bg-brand-surface-2"
-          : "border-brand-border bg-brand-surface"
-      }`}
-    >
-      <div className="text-xs font-bold uppercase tracking-wide text-brand-muted">
-        {label}
+        <PanelCard
+          title="Rozetler"
+          action={
+            <Link
+              href="/uye/lig"
+              className="text-xs font-bold uppercase tracking-wide text-brand-yellow hover:text-brand-white"
+            >
+              Lig
+            </Link>
+          }
+        >
+          {badgeKeys.length === 0 ? (
+            <EmptyState>
+              Henüz rozet yok — check-in ve antrenman kaydı rozet kazandırır.
+            </EmptyState>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {badgeKeys.map((key) => (
+                <Pill
+                  key={key}
+                  tone="yellow"
+                  title={BADGE_DEFINITIONS[key].description}
+                >
+                  {BADGE_DEFINITIONS[key].name}
+                </Pill>
+              ))}
+            </div>
+          )}
+        </PanelCard>
       </div>
-      <div className="font-display mt-2 text-2xl text-brand-white">
-        {value} {suffix && <span className="text-sm text-brand-muted">{suffix}</span>}
-      </div>
-    </div>
+    </PanelPage>
   );
 }
