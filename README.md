@@ -319,3 +319,5 @@ src/
 ## Kaynak
 
 Mimari ve ürün kararları için: `../gym-membership-blueprint/`.
+
+<!-- vercel git baglanti testi -->
