@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { trainingPlans } from "@/data/training-plans";
 import { equipmentCatalog } from "@/data/equipment";
+import { tools } from "@/config/tools";
 
 const stats = [
   { label: "Aktif üye", value: "250+" },
@@ -76,6 +77,41 @@ export default function HomePage() {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="border-b border-brand-border bg-brand-black">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+          <SectionHeading
+            eyebrow="Araçlar"
+            title="Tarayıcında çalışan dijital araçlar"
+            description="Üye olmasan bile deneyebilirsin — sunucuya hiçbir veri göndermeden, doğrudan bu sekmede çalışırlar."
+          />
+          <div className="mt-8 grid gap-5 sm:grid-cols-2">
+            {tools.map((tool) => (
+              <Link
+                key={tool.slug}
+                href={tool.href}
+                className="group relative flex flex-col justify-between overflow-hidden rounded-sm border border-brand-yellow/40 bg-brand-surface p-8 transition-colors hover:border-brand-yellow"
+              >
+                <div className="absolute inset-0 bg-diagonal-stripes opacity-[0.03]" />
+                <div className="relative">
+                  <span className="text-xs font-bold uppercase tracking-[0.2em] text-brand-yellow">
+                    {tool.tagline}
+                  </span>
+                  <h3 className="font-display mt-2 text-2xl uppercase tracking-wide text-brand-white">
+                    {tool.name}
+                  </h3>
+                  <p className="mt-3 text-sm leading-relaxed text-brand-muted">
+                    {tool.description}
+                  </p>
+                </div>
+                <span className="relative mt-6 text-sm font-bold uppercase tracking-wide text-brand-yellow group-hover:text-brand-white">
+                  Şimdi Dene →
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 

@@ -33,6 +33,23 @@ ayrı `node_modules`, ayrı bağımlılıklar kullanır.
 - Auth/veri erişimi yalnız uygulama katmanında korunur
   (`src/lib/auth/guards.ts`) — henüz Postgres RLS yok.
 
+**Faz 3 — sesli refleks & dövüş analitiği araçları**
+- `/araclar` — public (giriş gerektirmez), tamamen client-side iki araç.
+- `/araclar/sesli-refleks`: boks hamlesini Web Speech API ile Türkçe
+  seslendiren, tepki süresini ölçen combo-caller trainer.
+- `/araclar/dovus-analitigi`: yüklenen videoyu `@mediapipe/tasks-vision`
+  (PoseLandmarker, WASM) ile **tamamen tarayıcıda** işleyip guard/ayak
+  işi/kafa hareketi/duruş metrikleri çıkaran basitleştirilmiş analiz
+  motoru — video hiçbir sunucuya gönderilmez. Kong Academy'nin ayrı
+  Python/Railway fight-analytics backend'i **kullanılmadı** (kod olarak
+  da mevcut değildi/devre dışıydı) — yalnızca Kong'un kendi client-side
+  MediaPipe implementasyonu (`FightAnalyticsDashboard.tsx`) referans
+  alındı.
+- İş mantığı `src/domain/reflex/**` ve `src/domain/fight-analytics/**`
+  içinde saf fonksiyonlarda, Vitest ile test edilir.
+- Ana sayfada ("Araçlar" bölümü, hero'dan hemen sonra) ve ana nav'da öne
+  çıkarılır.
+
 Auth, ödeme, QR giriş, ders rezervasyonu, çok rollü personel hiyerarşisi
 **henüz yok** — bkz. [`BACKLOG.md`](./BACKLOG.md).
 
@@ -78,10 +95,13 @@ src/
   domain/
     performance/         # scorecard.ts (saf fonksiyon) + testler
     gamification/         # points.ts, badges.ts + testler
+    reflex/               # sesli refleks: hamle listesi, seçim, özet + testler
+    fight-analytics/       # video pose landmark -> metrik hesaplama + testler
   lib/
     auth/                 # session, guards, password, server actions
     queries/               # Prisma + domain'i birleştiren adapter katmanı
     db.ts                   # tekil PrismaClient
+    tts.ts                  # tarayıcı Web Speech API sarmalayıcı
 ```
 
 ## Kaynak

@@ -32,6 +32,29 @@
   giremiyor, otomatik `/uye`'ye yönleniyor) → oturumsuz erişim `/giris`'e
   yönleniyor.
 
+## Yapıldı (Faz 3 — sesli refleks & dövüş analitiği)
+
+- `/araclar`, `/araclar/sesli-refleks`, `/araclar/dovus-analitigi` —
+  public (giriş gerektirmez), tamamen client-side, backend/DB'ye
+  dokunmuyor.
+- **Sesli refleks:** Kong Academy'deki "Fight Refleks" özelliği yalnızca
+  `kong-academy/BACKLOG.md`'de tasarım olarak vardı — gerçek kod
+  (`src/lib/fight/commands.ts`, `scripts/verify-fight-reaction.ts`) üç
+  worktree'de de fiziksel olarak bulunamadı (grep ile doğrulandı).
+  Kopyalanacak kod yoktu; sıfırdan yazıldı (`src/domain/reflex/**`,
+  Web Speech API tabanlı `ReflexTrainer.tsx`).
+- **Dövüş analitiği:** Kong Academy'de gerçek, çalışan implementasyon
+  bulundu — `FightAnalyticsDashboard.tsx`, tamamen client-side
+  `@mediapipe/tasks-vision` (PoseLandmarker). Ayrı bir Python/FastAPI
+  backend de vardı (`fight-analytics/`, Railway'e deploy edilmek üzere)
+  ama kullanılmıyordu (`src/lib/fightAnalytics.ts` kod yorumunda "Python
+  backend kaldırıldı" yazıyor) — BlackBox'a da o Python backend
+  **taşınmadı**, yalnızca client-side MediaPipe yaklaşımı basitleştirilip
+  uyarlandı (`src/domain/fight-analytics/metrics.ts`).
+- Her iki domain katmanı da Vitest ile test edildi.
+- Ana sayfada "Araçlar" bölümü (hero'dan hemen sonra) + nav'da "Araçlar"
+  linki eklendi.
+
 ## Sonraki adımlar / açık işler
 
 - **SQLite → Postgres/Supabase geçişi:** kullanıcı hazır olduğunda ya
@@ -50,6 +73,15 @@
   `gym-membership-blueprint/07-uygulama-yol-haritasi.md` Faz 4-7'nin
   konusu; iş kararları (`09-baslangic-kararlari.md`) netleşmeden
   uygulanmamalı.
+- **Araç sonuçlarının üyeye kaydedilmesi:** şu an sesli refleks ve dövüş
+  analitiği sonuçları hiçbir yere kaydedilmiyor (sayfa yenilenince
+  kaybolur). İleride: giriş yapmış üye için sonucu `TrainingLog`'a
+  otomatik eklemek (gamification puanı da tetikler).
+- **Dövüş analitiği basitleştirilmiş bir motordur:** Kong'un çok
+  bileşenli Python analyzer'larının (guard/shoulder/footwork/head/
+  conditioning ayrı modüller) birebir karşılığı değil — tek bir basit
+  guard/ayak-işi/kafa-hareketi/duruş hesaplaması. Arayüzde bu açıkça
+  belirtiliyor.
 - **Test verisi (silinebilir):** `personel@blackbox.test` /
   `uye@blackbox.test`, şifre `test1234` — sentetik, gerçek Kong Academy
   danışanı değil. `prisma/dev.db`'yi silip `prisma migrate dev` + seed'i
