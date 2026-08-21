@@ -20,7 +20,7 @@ async function main() {
 
   const passwordHash = await bcrypt.hash("test1234", 12);
 
-  // --- Personel (staff) ---
+  // --- Antrenör (coach) ---
   let staffUser = await prisma.user.findUnique({
     where: { email: "personel@blackbox.test" },
   });
@@ -29,20 +29,45 @@ async function main() {
       data: {
         email: "personel@blackbox.test",
         passwordHash,
-        profile: { create: { displayName: "BlackBox Personel" } },
+        profile: { create: { displayName: "BlackBox Antrenör" } },
       },
     });
     await prisma.organizationUser.create({
       data: {
         organizationId: org.id,
         userId: staffUser.id,
-        role: "staff",
+        role: "coach",
         status: "active",
       },
     });
-    console.log("Personel oluşturuldu: personel@blackbox.test / test1234");
+    console.log("Antrenör oluşturuldu: personel@blackbox.test / test1234");
   } else {
-    console.log("Personel zaten vardı: personel@blackbox.test");
+    console.log("Antrenör zaten vardı: personel@blackbox.test");
+  }
+
+  // --- Yönetici (admin) — /yonetim paneli ---
+  let adminUser = await prisma.user.findUnique({
+    where: { email: "yonetici@blackbox.test" },
+  });
+  if (!adminUser) {
+    adminUser = await prisma.user.create({
+      data: {
+        email: "yonetici@blackbox.test",
+        passwordHash,
+        profile: { create: { displayName: "BlackBox Yönetici" } },
+      },
+    });
+    await prisma.organizationUser.create({
+      data: {
+        organizationId: org.id,
+        userId: adminUser.id,
+        role: "admin",
+        status: "active",
+      },
+    });
+    console.log("Yönetici oluşturuldu: yonetici@blackbox.test / test1234");
+  } else {
+    console.log("Yönetici zaten vardı: yonetici@blackbox.test");
   }
 
   // --- Test üyesi (sentetik) ---
@@ -73,6 +98,8 @@ async function main() {
         fullName: "Test Üye",
         email: "uye@blackbox.test",
         status: "active",
+        // Antrenör panelinde görünmesi için sorumlu antrenör şart.
+        assignedCoachUserId: staffUser.id,
       },
     });
     console.log("Test üyesi oluşturuldu: uye@blackbox.test / test1234");
@@ -88,6 +115,267 @@ async function main() {
   await seedSlots(org.id, staffUser.id);
   await seedPlanTemplates(org.id, staffUser.id, testMember);
   await seedWeight(testMember);
+  await seedNutrition(org.id, staffUser.id, testMember);
+  await seedPendingInvite(org.id, staffUser.id);
+  await seedRanks(org.id, staffUser.id, testMember);
+  await seedWaivers(org.id);
+  await seedFinance(org.id, staffUser.id, testMember);
+}
+
+// ── Maliye: hakediş ayarı, tahsilat, gider ─────────────────────
+async function seedFinance(organizationId, coachUserId, member) {
+  // Antrenör: ders başı 250 ₺ + tahsilatın %10'u, aylık 60 ders hakkı.
+  await prisma.coachCompensation.upsert({
+    where: { coachUserId },
+    update: {},
+    create: {
+      organizationId,
+      coachUserId,
+      model: "karma",
+      perSessionMinor: 25000,
+      revenueShareBps: 1000,
+      monthlySessionQuota: 60,
+      note: "Örnek ayar — kendi anlaşmanı Kadro ekranından gir.",
+    },
+  });
+
+  const existingRecurring = await prisma.recurringExpense.count({
+    where: { organizationId },
+  });
+  if (existingRecurring === 0) {
+    await prisma.recurringExpense.createMany({
+      data: [
+        {
+          organizationId,
+          category: "kira",
+          title: "Salon kirası",
+          amountMinor: 4500000,
+          dayOfMonth: 5,
+        },
+        {
+          organizationId,
+          category: "fatura",
+          title: "Elektrik + su + internet",
+          amountMinor: 850000,
+          dayOfMonth: 15,
+        },
+        {
+          organizationId,
+          category: "temizlik",
+          title: "Temizlik & sarf malzeme",
+          amountMinor: 300000,
+          dayOfMonth: 20,
+        },
+      ],
+    });
+    console.log("3 sabit gider tanımlandı (kira, fatura, temizlik).");
+  }
+
+  const existingPayment = await prisma.payment.count({ where: { organizationId } });
+  if (existingPayment === 0 && member) {
+    const subscription = await prisma.memberSubscription.findFirst({
+      where: { memberId: member.id },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Paketin yarısı peşin alınmış: kalan borç ekranlarda görünsün.
+    const half = Math.round((subscription?.priceMinor ?? 280000) / 2);
+    const payment = await prisma.payment.create({
+      data: {
+        organizationId,
+        memberId: member.id,
+        subscriptionId: subscription?.id ?? null,
+        amountMinor: half,
+        method: "nakit",
+        paidAt: new Date(),
+        note: "Peşinat",
+        recordedByUserId: coachUserId,
+      },
+    });
+
+    // Gelir payı hakedişi — uygulamadaki `recordPayment` ile aynı kural.
+    await prisma.coachEarning.create({
+      data: {
+        organizationId,
+        coachUserId,
+        memberId: member.id,
+        sourceType: "gelir_payi",
+        sourceKey: payment.id,
+        paymentId: payment.id,
+        amountMinor: Math.round((half * 1000) / 10000),
+        earnedAt: payment.paidAt,
+      },
+    });
+
+    console.log("Örnek tahsilat ve antrenör payı yazıldı.");
+  }
+
+  const existingExpense = await prisma.expense.count({ where: { organizationId } });
+  if (existingExpense === 0) {
+    await prisma.expense.createMany({
+      data: [
+        {
+          organizationId,
+          category: "ekipman",
+          title: "Kum torbası ve eldiven yenileme",
+          amountMinor: 1250000,
+          spentAt: new Date(),
+          recordedByUserId: coachUserId,
+        },
+        {
+          organizationId,
+          category: "pazarlama",
+          title: "Instagram reklamı",
+          amountMinor: 400000,
+          spentAt: new Date(),
+          recordedByUserId: coachUserId,
+        },
+      ],
+    });
+    console.log("2 örnek gider yazıldı.");
+  }
+}
+
+// ── Beslenme planı ─────────────────────────────────────────────
+async function seedNutrition(organizationId, staffUserId, member) {
+  if (!member) return;
+
+  const existing = await prisma.nutritionPlan.count({ where: { organizationId } });
+  if (existing > 0) {
+    console.log("Beslenme planı zaten vardı.");
+    return;
+  }
+
+  const plan = await prisma.nutritionPlan.create({
+    data: {
+      organizationId,
+      memberId: member.id,
+      createdByUserId: staffUserId,
+      title: "Antrenman Günü — Sıklet Koruma",
+      goal: "Kas kaybetmeden formu korumak",
+      status: "aktif",
+      dailyCalories: 2600,
+      proteinG: 170,
+      carbsG: 280,
+      fatG: 80,
+      notes: "Antrenman öncesi son öğün 90 dakika önce. Günde 3–4 litre su.",
+      dayType: "antrenman",
+      weekDaysCsv: "1,3,5",
+    },
+  });
+
+  const meals = [
+    {
+      title: "Kahvaltı",
+      timeLabel: "08:00",
+      foods: [
+        { name: "Yulaf ezmesi", amount: "80 g", calories: 300, proteinG: 10, carbsG: 54, fatG: 6, alternatives: "Tam buğday ekmeği 2 dilim" },
+        { name: "Yumurta", amount: "3 adet", calories: 210, proteinG: 18, carbsG: 1, fatG: 15 },
+      ],
+    },
+    {
+      title: "Ara Öğün",
+      timeLabel: "11:00",
+      foods: [
+        { name: "Yoğurt", amount: "200 g", calories: 120, proteinG: 12, carbsG: 9, fatG: 4 },
+        { name: "Ceviz", amount: "20 g", calories: 130, proteinG: 3, carbsG: 3, fatG: 13, alternatives: "Badem 20 g" },
+      ],
+    },
+    {
+      title: "Öğle",
+      timeLabel: "13:00",
+      foods: [
+        { name: "Tavuk göğsü", amount: "180 g", calories: 300, proteinG: 55, carbsG: 0, fatG: 7 },
+        { name: "Pirinç", amount: "150 g pişmiş", calories: 200, proteinG: 4, carbsG: 44, fatG: 1, alternatives: "Bulgur 150 g" },
+        { name: "Salata", amount: "1 kase", calories: 80, proteinG: 2, carbsG: 8, fatG: 5 },
+      ],
+    },
+    {
+      title: "Antrenman Sonrası",
+      timeLabel: "Antrenmandan hemen sonra",
+      notes: "Ringden çıkınca 30 dakika içinde.",
+      foods: [
+        { name: "Whey protein", amount: "1 ölçek", calories: 120, proteinG: 24, carbsG: 3, fatG: 2, alternatives: "Süt 400 ml" },
+        { name: "Muz", amount: "1 adet", calories: 105, proteinG: 1, carbsG: 27, fatG: 0 },
+      ],
+    },
+    {
+      title: "Akşam",
+      timeLabel: "20:00",
+      foods: [
+        { name: "Somon", amount: "150 g", calories: 310, proteinG: 34, carbsG: 0, fatG: 20, alternatives: "Hindi but 180 g" },
+        { name: "Fırın sebze", amount: "1 tabak", calories: 150, proteinG: 5, carbsG: 25, fatG: 4 },
+      ],
+    },
+  ];
+
+  for (const [index, meal] of meals.entries()) {
+    const created = await prisma.nutritionMeal.create({
+      data: {
+        planId: plan.id,
+        position: index + 1,
+        title: meal.title,
+        timeLabel: meal.timeLabel,
+        notes: meal.notes ?? null,
+      },
+    });
+
+    await prisma.nutritionFood.createMany({
+      data: meal.foods.map((food, foodIndex) => ({
+        mealId: created.id,
+        position: foodIndex + 1,
+        name: food.name,
+        amount: food.amount ?? null,
+        calories: food.calories ?? null,
+        proteinG: food.proteinG ?? null,
+        carbsG: food.carbsG ?? null,
+        fatG: food.fatG ?? null,
+        alternatives: food.alternatives ?? null,
+      })),
+    });
+  }
+
+  console.log(`Beslenme planı oluşturuldu: ${meals.length} öğün.`);
+}
+
+// ── Davet bekleyen sporcu ──────────────────────────────────────
+// Davet ekranını boş görmemek için: hesabı olmayan bir sporcu + bekleyen
+// davet. Token'ın kendisi saklanmaz (yalnız özeti), bu yüzden bağlantı
+// panelden "Yeni Bağlantı Üret" ile alınır.
+async function seedPendingInvite(organizationId, staffUserId) {
+  const existing = await prisma.member.findFirst({
+    where: { organizationId, memberNo: "BB-0002" },
+  });
+  if (existing) {
+    console.log("Davet bekleyen sporcu zaten vardı.");
+    return;
+  }
+
+  const member = await prisma.member.create({
+    data: {
+      organizationId,
+      memberNo: "BB-0002",
+      fullName: "Davet Bekleyen Sporcu",
+      email: "davetli@blackbox.test",
+      phone: "0555 000 00 00",
+      status: "active",
+    },
+  });
+
+  const { createHash, randomBytes } = await import("node:crypto");
+  const token = randomBytes(32).toString("base64url");
+
+  await prisma.memberInvite.create({
+    data: {
+      memberId: member.id,
+      tokenHash: createHash("sha256").update(token).digest("hex"),
+      email: member.email,
+      expiresAt: new Date(Date.now() + 72 * 3600 * 1000),
+      createdByUserId: staffUserId,
+    },
+  });
+
+  console.log(`Davet bekleyen sporcu oluşturuldu. Bağlantı: /davet/${token}`);
 }
 
 // ── Üyelik paketleri ───────────────────────────────────────────
@@ -153,6 +441,9 @@ async function seedMembershipPlans(organizationId, member) {
         endDate,
         status: "aktif",
         sessionsTotal: pack.totalSessions,
+        // Anlaşılan tutar paketin etiket fiyatı; yarısı peşin alınmış
+        // varsayılır ki "borçlu üyelik" ekranı boş görünmesin.
+        priceMinor: pack.priceMinor,
       },
     });
     console.log(`Test üyesine "${pack.name}" üyeliği tanımlandı.`);
@@ -466,6 +757,262 @@ async function seedWeight(member) {
     },
   });
   console.log("Tartı kayıtları ve sıklet hedefi oluşturuldu.");
+}
+
+// ── Kuşak merdiveni & müfredat ─────────────────────────────────
+/**
+ * Amatör boks/kickbox salonlarında yaygın olan beş kademeli merdiven.
+ * Eşikler bilinçli ölçülü: ilk kuşak katılımı ödüllendirir, üst kuşaklar
+ * hem ders sayısı hem süre ister — kuşak satın alınan bir şey olmasın diye.
+ */
+async function seedRanks(organizationId, staffUserId, member) {
+  const existing = await prisma.rank.count({ where: { organizationId } });
+  if (existing > 0) {
+    console.log("Kuşak merdiveni zaten vardı.");
+    return;
+  }
+
+  const ladder = [
+    {
+      slug: "beyaz",
+      name: "Beyaz Kuşak",
+      color: "#e5e7eb",
+      minSessions: 0,
+      minWeeks: 0,
+      summary: "Başlangıç. Duruş, temel guard ve salon kuralları.",
+      requirements: [
+        { kind: "teknik", label: "Duruşu koruyarak öne-arkaya hareket" },
+        { kind: "teknik", label: "Jab — ped üzerinde temiz 2 round", techniqueSlug: "jab" },
+        { kind: "katilim", label: "İlk 4 derse katılım" },
+      ],
+    },
+    {
+      slug: "sari",
+      name: "Sarı Kuşak",
+      color: "#facc15",
+      minSessions: 16,
+      minWeeks: 8,
+      summary: "Temel vuruşlar ve savunma refleksinin oturması.",
+      requirements: [
+        { kind: "teknik", label: "Jab-cross kombinasyonu, ped üzerinde 3 round", techniqueSlug: "jab" },
+        { kind: "teknik", label: "Slip ve blok ile 1 round savunma çalışması" },
+        { kind: "kondisyon", label: "3 round ip atlama, round arası 1 dk" },
+        { kind: "sinav", label: "Antrenör önünde teknik gösterim" },
+      ],
+    },
+    {
+      slug: "turuncu",
+      name: "Turuncu Kuşak",
+      color: "#fb923c",
+      minSessions: 40,
+      minWeeks: 16,
+      summary: "Kombinasyon zinciri, mesafe ve ritim.",
+      requirements: [
+        { kind: "teknik", label: "Üçlü kombinasyon (1-2-3) hareket hâlinde" },
+        { kind: "teknik", label: "Geri adım + karşı vuruş" },
+        { kind: "kondisyon", label: "5 round torba, RPE 7 altında kalarak" },
+        { kind: "sinav", label: "Kontrollü sparring — teknik değerlendirme" },
+      ],
+    },
+    {
+      slug: "yesil",
+      name: "Yeşil Kuşak",
+      color: "#4ade80",
+      minSessions: 80,
+      minWeeks: 28,
+      summary: "Sparring yetkinliği ve maç okuma.",
+      requirements: [
+        { kind: "teknik", label: "Açı alarak çıkış (pivot) ve karşı seri" },
+        { kind: "teknik", label: "Gövde vuruşlarını kombinasyona katma" },
+        { kind: "kondisyon", label: "8 round sparring temposu" },
+        { kind: "sinav", label: "İç turnuva ya da salon maçında görev" },
+      ],
+    },
+    {
+      slug: "siyah",
+      name: "Siyah Kuşak",
+      color: "#111827",
+      minSessions: 160,
+      minWeeks: 52,
+      summary: "Salonun ileri seviyesi; yeni başlayanlara yardım sorumluluğu.",
+      requirements: [
+        { kind: "sinav", label: "Tam teknik sınavı (vuruş, savunma, ayak işi)" },
+        { kind: "katilim", label: "En az 3 ay yeni başlayanlara asistanlık" },
+        { kind: "sinav", label: "Resmî ya da iç turnuva müsabakası" },
+      ],
+    },
+  ];
+
+  for (const [index, rank] of ladder.entries()) {
+    await prisma.rank.create({
+      data: {
+        organizationId,
+        order: index,
+        slug: rank.slug,
+        name: rank.name,
+        color: rank.color,
+        summary: rank.summary,
+        minSessions: rank.minSessions,
+        minWeeks: rank.minWeeks,
+        requirements: {
+          create: rank.requirements.map((requirement, position) => ({
+            position: position + 1,
+            kind: requirement.kind,
+            label: requirement.label,
+            techniqueSlug: requirement.techniqueSlug ?? null,
+          })),
+        },
+      },
+    });
+  }
+  console.log(`${ladder.length} kuşak ve müfredatı oluşturuldu.`);
+
+  // Test üyesi beyaz kuşakla başlasın; sarıya doğru ilerlediği görünsün.
+  const white = await prisma.rank.findFirst({
+    where: { organizationId, slug: "beyaz" },
+  });
+  const yellow = await prisma.rank.findFirst({
+    where: { organizationId, slug: "sari" },
+    include: { requirements: { orderBy: { position: "asc" } } },
+  });
+
+  if (white) {
+    const awardedAt = new Date();
+    awardedAt.setUTCDate(awardedAt.getUTCDate() - 70);
+    await prisma.memberRank.create({
+      data: {
+        memberId: member.id,
+        rankId: white.id,
+        awardedByUserId: staffUserId,
+        awardedAt,
+        note: "İlk 4 dersini tamamladı.",
+      },
+    });
+  }
+
+  if (yellow) {
+    for (const requirement of yellow.requirements.slice(0, 2)) {
+      await prisma.requirementCheck.create({
+        data: {
+          memberId: member.id,
+          requirementId: requirement.id,
+          checkedByUserId: staffUserId,
+        },
+      });
+    }
+    console.log("Test üyesine beyaz kuşak ve 2 müfredat işareti verildi.");
+  }
+}
+
+// ── Onam & sağlık beyanı ───────────────────────────────────────
+/**
+ * Örnek metinler — hukuki danışmanlık değildir, salonun kendi avukatıyla
+ * gözden geçirmesi beklenir. Amaç akışın (imza → sürüm → yenileme) boş
+ * ekranla değil gerçek bir metinle denenebilmesi.
+ */
+async function seedWaivers(organizationId) {
+  const existing = await prisma.waiverTemplate.count({
+    where: { organizationId },
+  });
+  if (existing > 0) {
+    console.log("Onam formları zaten vardı.");
+    return;
+  }
+
+  const templates = [
+    {
+      kind: "saglik",
+      title: "Sağlık Beyanı",
+      requiresGuardian: false,
+      isRequired: true,
+      questions: [
+        "Kalp, tansiyon veya solunum rahatsızlığın var mı?",
+        "Son 6 ayda ameliyat geçirdin ya da kırık/çıkık yaşadın mı?",
+        "Düzenli kullandığın ilaç var mı?",
+        "Baş dönmesi, bayılma veya nöbet öykün var mı?",
+        "Antrenmanı etkileyebilecek başka bir sağlık durumun var mı?",
+      ],
+      body: [
+        "Bu beyanı doldururken verdiğim bilgilerin doğru ve eksiksiz olduğunu kabul ederim.",
+        "",
+        "Dövüş sporlarının temas içeren bir faaliyet olduğunu, antrenmanların yüksek tempolu olabileceğini ve sağlık durumumu doğru bildirmemenin kendi güvenliğimi riske attığını biliyorum.",
+        "",
+        "Sağlık durumumda bir değişiklik olduğunda (yeni teşhis, sakatlık, ilaç değişikliği, hamilelik) antrenörüme gecikmeden bildireceğimi taahhüt ederim.",
+        "",
+        "Antrenman sırasında rahatsızlık hissettiğimde derhâl durup antrenörümü bilgilendireceğimi kabul ederim.",
+      ].join("\n"),
+    },
+    {
+      kind: "sorumluluk",
+      title: "Sorumluluk ve Salon Kuralları",
+      requiresGuardian: false,
+      isRequired: true,
+      questions: [],
+      body: [
+        "Boks, kickbox ve benzeri dövüş sporlarının yaralanma riski taşıdığını biliyor ve bu riski kendi isteğimle üstleniyorum.",
+        "",
+        "Antrenörün verdiği talimatlara uyacağımı; ağızlık, bandaj, eldiven ve gerekli koruyucu ekipmanı belirtilen çalışmalarda kullanacağımı kabul ederim.",
+        "",
+        "Sparring çalışmalarına yalnız antrenörün uygun gördüğü seviyede ve onun gözetiminde katılacağımı, izinsiz sparring yapmayacağımı kabul ederim.",
+        "",
+        "Salon içinde diğer sporculara ve ekipmana saygılı davranacağımı, öğrendiğim teknikleri salon dışında kavga amacıyla kullanmayacağımı beyan ederim.",
+        "",
+        "Kendi ihmalimden kaynaklanan sakatlıklarda salonun sorumlu tutulamayacağını kabul ederim. Bu beyan, salonun kendi kusurundan doğan yasal sorumluluğunu ortadan kaldırmaz.",
+      ].join("\n"),
+    },
+    {
+      kind: "veli-izni",
+      title: "Veli İzni (18 Yaş Altı)",
+      requiresGuardian: true,
+      isRequired: false,
+      questions: [
+        "Çocuğunuzun bilinen bir sağlık sorunu var mı?",
+        "Acil durumda ilk yardım uygulanmasına izin veriyor musunuz?",
+      ],
+      body: [
+        "Velisi olduğum sporcunun BlackBox bünyesindeki antrenmanlara katılmasına izin veriyorum.",
+        "",
+        "Sporcunun sağlık durumunu doğru bildirdiğimi, değişiklik olduğunda salonu bilgilendireceğimi kabul ederim.",
+        "",
+        "Acil bir durumda ulaşılamadığım takdirde sporcunun en yakın sağlık kuruluşuna götürülmesine onay veriyorum.",
+        "",
+        "Sporcunun salona geliş-gidiş sorumluluğunun bana ait olduğunu biliyorum.",
+      ].join("\n"),
+    },
+    {
+      kind: "kvkk",
+      title: "KVKK Aydınlatma Metni",
+      requiresGuardian: false,
+      isRequired: true,
+      questions: [],
+      body: [
+        "BlackBox; üyelik ve antrenman takibi amacıyla ad-soyad, iletişim bilgisi, doğum tarihi, sağlık beyanı, antrenman ve tartı kayıtlarını işler.",
+        "",
+        "Veriler yalnız salonun antrenör ve yöneticileri tarafından, hizmetin yürütülmesi amacıyla görülür; üçüncü kişilerle paylaşılmaz.",
+        "",
+        "Kişisel verilerine erişme, düzeltilmesini ve silinmesini isteme hakkın vardır. Verilerinin tamamını panelindeki Verilerimi indir bağlantısından her zaman indirebilirsin.",
+        "",
+        "Silme talebinde kimlik bilgilerin kalıcı olarak kaldırılır; salonun doluluk istatistikleri kimliksiz olarak korunur.",
+      ].join("\n"),
+    },
+  ];
+
+  for (const template of templates) {
+    await prisma.waiverTemplate.create({
+      data: {
+        organizationId,
+        kind: template.kind,
+        title: template.title,
+        body: template.body,
+        questionsJson: template.questions.length
+          ? JSON.stringify(template.questions)
+          : null,
+        requiresGuardian: template.requiresGuardian,
+        isRequired: template.isRequired,
+      },
+    });
+  }
+  console.log(`${templates.length} onam formu oluşturuldu.`);
 }
 
 /** Haftanın Pazartesi'si (UTC) — src/lib/date.ts ile aynı kural. */

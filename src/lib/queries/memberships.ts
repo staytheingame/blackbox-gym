@@ -1,9 +1,11 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { memberWhere, type StaffScope } from "@/lib/auth/scope";
 import {
   summarizeCredits,
   type BookingStatus,
 } from "@/domain/booking/credits";
+import { summarizeDue, type DueStatus } from "@/domain/finance/dues";
 
 /**
  * Üyelik = **ders paketi**. Bir paket "kaç gün geçerli" ve "kaç ders içeriyor"
@@ -57,6 +59,12 @@ export type MembershipOverview = {
     sessionsUsed: number;
     sessionsReserved: number;
     sessionsRemaining: number | null;
+    currency: string;
+    /** Anlaşılan tutar (kuruş) — paketin etiket fiyatı değil, bu üyeliğinki. */
+    priceMinor: number;
+    paidMinor: number;
+    balanceMinor: number;
+    dueStatus: DueStatus;
   }[];
   activeCount: number;
   expiringSoon: number;
@@ -64,6 +72,9 @@ export type MembershipOverview = {
   creditsExhausted: number;
   /** Durumu hâlâ `aktif` ama süresi dolmuş kayıt sayısı — kapatılmayı bekler. */
   staleActiveCount: number;
+  /** Ödemesi eksik üyelik sayısı ve toplam alacak (kuruş). */
+  unpaidCount: number;
+  unpaidTotalMinor: number;
 };
 
 /**
@@ -71,34 +82,49 @@ export type MembershipOverview = {
  * çekilip abonelik dönemine göre eşleştirilir (üye başına ayrı sorgu yok).
  */
 export async function getMembershipOverview(
-  organizationId: string,
+  scope: StaffScope,
   { expiringWithinDays = 14 }: { expiringWithinDays?: number } = {},
 ): Promise<MembershipOverview> {
-  const [planRows, subscriptionRows, bookingRows] = await Promise.all([
-    prisma.membershipPlan.findMany({
-      where: { organizationId },
-      orderBy: [{ isActive: "desc" }, { priceMinor: "asc" }],
-      include: {
-        _count: { select: { subscriptions: { where: { status: "aktif" } } } },
-      },
-    }),
-    prisma.memberSubscription.findMany({
-      where: { member: { organizationId } },
-      orderBy: { endDate: "asc" },
-      include: {
-        member: { select: { id: true, fullName: true, memberNo: true } },
-        plan: { select: { name: true } },
-      },
-    }),
-    prisma.slotBooking.findMany({
-      where: { member: { organizationId } },
-      select: {
-        memberId: true,
-        status: true,
-        slot: { select: { startsAt: true } },
-      },
-    }),
-  ]);
+  const [planRows, subscriptionRows, bookingRows, paymentRows] =
+    await Promise.all([
+      prisma.membershipPlan.findMany({
+        where: { organizationId: scope.organizationId },
+        orderBy: [{ isActive: "desc" }, { priceMinor: "asc" }],
+        include: {
+          _count: { select: { subscriptions: { where: { status: "aktif" } } } },
+        },
+      }),
+      prisma.memberSubscription.findMany({
+        where: { member: memberWhere(scope) },
+        orderBy: { endDate: "asc" },
+        include: {
+          member: { select: { id: true, fullName: true, memberNo: true } },
+          plan: { select: { name: true } },
+        },
+      }),
+      prisma.slotBooking.findMany({
+        where: { member: memberWhere(scope) },
+        select: {
+          memberId: true,
+          status: true,
+          slot: { select: { startsAt: true } },
+        },
+      }),
+      // Üyelik başına tahsilat toplamı — abonelik başına ayrı sorgu (N+1) yok.
+      prisma.payment.groupBy({
+        by: ["subscriptionId"],
+        where: {
+          organizationId: scope.organizationId,
+          subscriptionId: { not: null },
+          member: memberWhere(scope),
+        },
+        _sum: { amountMinor: true },
+      }),
+    ]);
+
+  const paidBySubscription = new Map(
+    paymentRows.map((row) => [row.subscriptionId, row._sum.amountMinor ?? 0]),
+  );
 
   const bookingsByMember = new Map<
     string,
@@ -111,6 +137,7 @@ export async function getMembershipOverview(
   }
 
   const now = Date.now();
+  const nowDate = new Date(now);
 
   const subscriptions = subscriptionRows.map((row) => {
     const daysLeft = Math.ceil((row.endDate.getTime() - now) / MS_PER_DAY);
@@ -121,6 +148,13 @@ export async function getMembershipOverview(
     const credits = summarizeCredits({
       total: row.sessionsTotal,
       bookingStatuses: inPeriod.map((booking) => booking.status),
+    });
+
+    const due = summarizeDue({
+      priceMinor: row.priceMinor,
+      paidMinor: paidBySubscription.get(row.id) ?? 0,
+      endDate: row.endDate,
+      now: nowDate,
     });
 
     return {
@@ -139,6 +173,11 @@ export async function getMembershipOverview(
       sessionsUsed: credits.used,
       sessionsReserved: credits.reserved,
       sessionsRemaining: credits.remaining,
+      currency: row.currency,
+      priceMinor: due.priceMinor,
+      paidMinor: due.paidMinor,
+      balanceMinor: due.balanceMinor,
+      dueStatus: due.status,
     };
   });
 
@@ -165,6 +204,11 @@ export async function getMembershipOverview(
     staleActiveCount: subscriptions.filter(
       (s) => s.status === "aktif" && s.daysLeft < 0,
     ).length,
+    unpaidCount: subscriptions.filter((s) => s.balanceMinor > 0).length,
+    unpaidTotalMinor: subscriptions.reduce(
+      (total, s) => total + s.balanceMinor,
+      0,
+    ),
   };
 }
 
@@ -185,7 +229,15 @@ export async function listActiveMembershipPlans(organizationId: string) {
 }
 
 export type SubscriptionResult =
-  | { ok: true; startDate: Date; endDate: Date; renewed: boolean }
+  | {
+      ok: true;
+      subscriptionId: string;
+      startDate: Date;
+      endDate: Date;
+      renewed: boolean;
+      priceMinor: number;
+      currency: string;
+    }
   | { ok: false; error: string };
 
 /**
@@ -199,7 +251,17 @@ export type SubscriptionResult =
 export async function startOrRenewSubscription(
   memberId: string,
   planId: string,
-  { note }: { note?: string } = {},
+  {
+    note,
+    priceMinor,
+  }: {
+    note?: string;
+    /**
+     * Anlaşılan tutar (kuruş). Verilmezse paketin etiket fiyatı kopyalanır;
+     * indirim/pazarlık yapıldıysa çağıran yer düşürülmüş tutarı geçirir.
+     */
+    priceMinor?: number;
+  } = {},
 ): Promise<SubscriptionResult> {
   const plan = await prisma.membershipPlan.findUnique({
     where: { id: planId },
@@ -209,6 +271,8 @@ export async function startOrRenewSubscription(
       durationDays: true,
       totalSessions: true,
       isActive: true,
+      priceMinor: true,
+      currency: true,
     },
   });
   if (!plan) return { ok: false, error: "Paket bulunamadı." };
@@ -236,7 +300,9 @@ export async function startOrRenewSubscription(
     : today;
   const endDate = new Date(startDate.getTime() + plan.durationDays * MS_PER_DAY);
 
-  await prisma.memberSubscription.create({
+  const agreedPrice = Math.max(0, priceMinor ?? plan.priceMinor);
+
+  const subscription = await prisma.memberSubscription.create({
     data: {
       memberId,
       planId: plan.id,
@@ -244,11 +310,21 @@ export async function startOrRenewSubscription(
       endDate,
       status: "aktif",
       sessionsTotal: plan.totalSessions,
+      priceMinor: agreedPrice,
+      currency: plan.currency,
       note,
     },
   });
 
-  return { ok: true, startDate, endDate, renewed };
+  return {
+    ok: true,
+    subscriptionId: subscription.id,
+    startDate,
+    endDate,
+    renewed,
+    priceMinor: agreedPrice,
+    currency: plan.currency,
+  };
 }
 
 export const SUBSCRIPTION_STATUSES = [
@@ -281,17 +357,20 @@ export async function setSubscriptionStatus(
 }
 
 /**
- * Süresi dolmuş "aktif" üyelikleri kapatır. Zamanlanmış iş yerine şimdilik
- * panelden elle tetiklenir; bir cron kurulduğunda çağıracağı fonksiyon budur.
+ * Süresi dolmuş "aktif" üyelikleri kapatır.
+ *
+ * `organizationId` verilmezse TÜM salonlar için çalışır — zamanlanmış iş
+ * (`/api/cron/hatirlatici`) böyle çağırır. Panelden elle tetiklendiğinde ise
+ * yalnız o salonun kayıtlarına dokunulur.
  */
 export async function closeExpiredSubscriptions(
-  organizationId: string,
+  organizationId?: string,
 ): Promise<number> {
   const expired = await prisma.memberSubscription.findMany({
     where: {
       status: "aktif",
       endDate: { lt: atStartOfDay(new Date()) },
-      member: { organizationId },
+      ...(organizationId ? { member: { organizationId } } : {}),
     },
     select: { id: true },
   });

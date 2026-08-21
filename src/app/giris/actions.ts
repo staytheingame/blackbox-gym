@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
+import { homePathForRole, normalizeRole } from "@/lib/auth/roles";
 
 const loginSchema = z.object({
   email: z.string().email("Geçerli bir e-posta gir."),
@@ -43,5 +44,5 @@ export async function loginAction(
     where: { userId: user.id, status: "active" },
   });
 
-  redirect(membership?.role === "staff" ? "/personel" : "/uye");
+  redirect(membership ? homePathForRole(normalizeRole(membership.role)) : "/uye");
 }

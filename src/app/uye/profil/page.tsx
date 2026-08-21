@@ -5,6 +5,7 @@ import {
   getCurrentUser,
   requireOrganizationMembership,
 } from "@/lib/auth/guards";
+import { ORG_ROLE_LABEL } from "@/lib/auth/roles";
 import { formatDateTR } from "@/lib/date";
 import { logoutAction } from "@/lib/auth/actions";
 import { PanelCard, PanelPage, Pill, Scaffold } from "@/components/panel/ui";
@@ -26,7 +27,7 @@ export default async function MemberProfilePage() {
     { label: "Telefon", value: member.phone ?? "—" },
     { label: "Üyelik Durumu", value: member.status },
     { label: "Kayıt Tarihi", value: formatDateTR(member.createdAt) },
-    { label: "Rol", value: membership.role === "staff" ? "Personel" : "Üye" },
+    { label: "Rol", value: ORG_ROLE_LABEL[membership.role] },
   ];
 
   return (

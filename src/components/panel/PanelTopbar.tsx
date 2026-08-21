@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { PANEL_ROLE_LABEL, type PanelRole } from "@/config/panel-nav";
+import {
+  PANEL_ROLE_HOME,
+  PANEL_ROLE_LABEL,
+  type PanelRole,
+} from "@/config/panel-nav";
 import { useMobileNav } from "./MobileNavContext";
 import { MenuIcon } from "./icons";
 
@@ -20,7 +24,7 @@ export function PanelTopbar({ role }: { role: PanelRole }) {
         <MenuIcon className="h-5 w-5" />
       </button>
       <Link
-        href={role === "staff" ? "/personel" : "/uye"}
+        href={PANEL_ROLE_HOME[role]}
         className="font-display flex items-center gap-1 text-base tracking-wide"
       >
         <span className="text-brand-white">BLACK</span>

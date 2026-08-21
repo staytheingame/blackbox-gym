@@ -2,15 +2,21 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
 import { getWeekStart, getWeekStartInstant } from "@/lib/date";
+import { memberWhere, type StaffScope } from "@/lib/auth/scope";
 import { getBadgeKeys, getPointsTotal } from "@/lib/queries/performance";
 import type { CheckInAnswers } from "@/domain/performance/types";
 
+/**
+ * Antrenör sorguları — hepsi `StaffScope` alır, çünkü antrenör **yalnız
+ * kendi sporcularını** görür (bkz. `src/lib/auth/scope.ts`). Yönetici
+ * çağırdığında kapsam salonun tamamıdır. Doğrudan `where: { organizationId }`
+ * yazmak sızıntıdır; `memberWhere(scope)` kullan.
+ */
+
 /** Menü rozetinde ve genel bakışta gösterilen "incelenmemiş check-in" sayısı. */
-export async function countPendingCheckIns(
-  organizationId: string,
-): Promise<number> {
+export async function countPendingCheckIns(scope: StaffScope): Promise<number> {
   return prisma.checkIn.count({
-    where: { status: "submitted", member: { organizationId } },
+    where: { status: "submitted", member: memberWhere(scope) },
   });
 }
 
@@ -25,11 +31,11 @@ export type PendingCheckIn = {
 
 /** İncelenmeyi bekleyen check-in'ler — en yeni hafta başta. */
 export async function listPendingCheckIns(
-  organizationId: string,
+  scope: StaffScope,
   limit = 30,
 ): Promise<PendingCheckIn[]> {
   const rows = await prisma.checkIn.findMany({
-    where: { status: "submitted", member: { organizationId } },
+    where: { status: "submitted", member: memberWhere(scope) },
     orderBy: { weekStart: "desc" },
     take: limit,
     include: { member: { select: { id: true, fullName: true, memberNo: true } } },
@@ -56,7 +62,7 @@ export type StaffOverview = {
 
 /** Personel panelinin giriş ekranı için tek seferde toplanan sayılar. */
 export async function getStaffOverview(
-  organizationId: string,
+  scope: StaffScope,
 ): Promise<StaffOverview> {
   const now = new Date();
   const weekStart = getWeekStart(now);
@@ -70,16 +76,16 @@ export async function getStaffOverview(
     trainingLogsThisWeek,
     pendingPreview,
   ] = await Promise.all([
-    prisma.member.count({ where: { organizationId } }),
-    prisma.member.count({ where: { organizationId, status: "active" } }),
-    countPendingCheckIns(organizationId),
+    prisma.member.count({ where: memberWhere(scope) }),
+    prisma.member.count({ where: memberWhere(scope, { status: "active" }) }),
+    countPendingCheckIns(scope),
     prisma.checkIn.count({
-      where: { weekStart, member: { organizationId } },
+      where: { weekStart, member: memberWhere(scope) },
     }),
     prisma.trainingLog.count({
-      where: { loggedAt: { gte: weekStartedAt }, member: { organizationId } },
+      where: { loggedAt: { gte: weekStartedAt }, member: memberWhere(scope) },
     }),
-    listPendingCheckIns(organizationId, 5),
+    listPendingCheckIns(scope, 5),
   ]);
 
   return {
@@ -93,9 +99,9 @@ export async function getStaffOverview(
 }
 
 /** Aday kayıtları — henüz üye olmamış, deneme dersi aşamasındakiler. */
-export async function listLeads(organizationId: string) {
+export async function listLeads(scope: StaffScope) {
   return prisma.member.findMany({
-    where: { organizationId, status: "lead" },
+    where: memberWhere(scope, { status: "lead" }),
     orderBy: { createdAt: "desc" },
   });
 }
@@ -107,6 +113,9 @@ export type MembershipRow = {
   status: string;
   createdAt: Date;
   lastTrainingAt: Date | null;
+  /** Sorumlu antrenör — atanmamışsa `null` (yalnız yönetici görür). */
+  coachUserId: string | null;
+  coachName: string | null;
 };
 
 export type MembershipBreakdown = {
@@ -119,11 +128,11 @@ export type MembershipBreakdown = {
 
 /** Üyelik durumu dökümü — ödeme/plan modeli gelene kadar `Member.status` üzerinden. */
 export async function getMembershipBreakdown(
-  organizationId: string,
+  scope: StaffScope,
   { dormantDays = 30 }: { dormantDays?: number } = {},
 ): Promise<MembershipBreakdown> {
   const rows = await prisma.member.findMany({
-    where: { organizationId },
+    where: memberWhere(scope),
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -131,6 +140,10 @@ export async function getMembershipBreakdown(
       memberNo: true,
       status: true,
       createdAt: true,
+      assignedCoachUserId: true,
+      assignedCoach: {
+        select: { email: true, profile: { select: { displayName: true } } },
+      },
       trainingLogs: {
         orderBy: { loggedAt: "desc" },
         take: 1,
@@ -151,6 +164,11 @@ export async function getMembershipBreakdown(
     status: row.status,
     createdAt: row.createdAt,
     lastTrainingAt: row.trainingLogs[0]?.loggedAt ?? null,
+    coachUserId: row.assignedCoachUserId,
+    coachName:
+      row.assignedCoach?.profile?.displayName ??
+      row.assignedCoach?.email ??
+      null,
   }));
 
   const dormantBefore = new Date(Date.now() - dormantDays * 24 * 60 * 60 * 1000);
@@ -186,11 +204,11 @@ export type MemberInsight = {
  * Tek sorguda üye + son check-in + son antrenman çekilir (N+1 yok).
  */
 export async function getMemberInsights(
-  organizationId: string,
+  scope: StaffScope,
   { inactiveDays = 14 }: { inactiveDays?: number } = {},
 ): Promise<MemberInsight[]> {
   const rows = await prisma.member.findMany({
-    where: { organizationId, status: "active" },
+    where: memberWhere(scope, { status: "active" }),
     select: {
       id: true,
       fullName: true,
@@ -253,10 +271,15 @@ export async function getMemberInsights(
 
 /** Üye listesi + toplam puan. Puanlar tek `groupBy` ile gelir — üye başına
  * ayrı sorgu (N+1) 100 üyede 101 gidiş-dönüş demekti. */
-export async function listMembers(organizationId: string) {
+export async function listMembers(scope: StaffScope) {
   const members = await prisma.member.findMany({
-    where: { organizationId },
+    where: memberWhere(scope),
     orderBy: { createdAt: "desc" },
+    include: {
+      assignedCoach: {
+        select: { id: true, email: true, profile: { select: { displayName: true } } },
+      },
+    },
   });
   if (members.length === 0) return [];
 
@@ -270,9 +293,12 @@ export async function listMembers(organizationId: string) {
     pointRows.map((row) => [row.memberId, row._sum.points ?? 0]),
   );
 
-  return members.map((member) => ({
+  return members.map(({ assignedCoach, ...member }) => ({
     ...member,
     points: pointsByMember.get(member.id) ?? 0,
+    /** Sorumlu antrenörün görünen adı — atanmamışsa `null`. */
+    coachName:
+      assignedCoach?.profile?.displayName ?? assignedCoach?.email ?? null,
   }));
 }
 
@@ -281,6 +307,8 @@ export type CreateMemberInput = {
   email: string;
   phone?: string;
   password: string;
+  /** Sorumlu antrenör — genelde sporcuyu ekleyen kişinin kendisi. */
+  assignedCoachUserId?: string | null;
 };
 
 export type CreateMemberResult =
@@ -326,6 +354,7 @@ export async function createMemberWithAccount(
         email: normalizedEmail,
         phone: input.phone,
         status: "active",
+        assignedCoachUserId: input.assignedCoachUserId ?? null,
       },
     });
   });

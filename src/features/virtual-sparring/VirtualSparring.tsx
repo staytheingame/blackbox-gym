@@ -15,8 +15,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PERFORMANCE_CONFIG } from "@/config/performanceConfig";
-import { beep, initAudio, releaseAudio, speak, stopSpeaking } from "@/lib/audio/voice";
-import { SoundControls, initialMuted } from "@/components/ui/SoundControls";
+import { beep, initAudio, isMuted, releaseAudio, setMuted, speak, stopSpeaking } from "@/lib/audio/voice";
+import { SoundControls } from "@/components/ui/SoundControls";
 import { cameraErrorMessage, openCamera, stopCamera } from "../camera-fight-lab/cameraManager";
 import { cueSpeech } from "../camera-fight-lab/audioCues";
 import { VideoFrameScheduler } from "../camera-fight-lab/frameScheduler";
@@ -93,6 +93,51 @@ const DIFFICULTY_TEMPO: Record<SparringDifficulty, 1 | 2 | 3 | null> = {
   zor: 1,
 };
 
+/**
+ * Geri bildirim modu — komutlar hangi kanaldan geliyor.
+ *   "both"   : ekranda cue metni + sesli komut (varsayılan).
+ *   "audio"  : yalnızca sesli komut; ekrandaki cue/sonuç metni gizlenir —
+ *              kulağına güvenmen gerekir (rakip figürü ve hedef halkası
+ *              yine görünür, yoksa nereye vuracağını göremezsin).
+ *   "visual" : ses tamamen kapalı (paylaşılan sustur ayarını kullanır);
+ *              komutlar yalnızca ekranda yazar.
+ */
+export type FeedbackMode = "both" | "audio" | "visual";
+
+const FEEDBACK_MODE_LABELS: Record<FeedbackMode, string> = {
+  both: "Ses + Görsel",
+  audio: "Sadece Ses",
+  visual: "Sadece Görsel",
+};
+
+const FEEDBACK_MODE_SHORT_LABELS: Record<FeedbackMode, string> = {
+  both: "İkisi",
+  audio: "Ses",
+  visual: "Görsel",
+};
+
+const FEEDBACK_MODE_HINTS: Record<FeedbackMode, string> = {
+  both: "Komutlar hem sesli okunur hem ekranda yazar; rakibin saldırısı ayrı bir efektle duyulur.",
+  audio: "Komutlar yalnızca sesli okunur, ekranda cue metni yazmaz — kulağına güven. Rakip ve hedef halkası yine görünür.",
+  visual: "Ses tamamen kapalı — komutlar yalnızca ekranda yazar.",
+};
+
+const FEEDBACK_MODE_KEY = "blackbox.sanalRakip.feedbackMode";
+
+/** "visual" paylaşılan sustur bayrağından türer; "audio"/"both" ayrı saklanır. */
+function loadStoredFeedbackMode(): "both" | "audio" {
+  try {
+    return window.localStorage.getItem(FEEDBACK_MODE_KEY) === "audio" ? "audio" : "both";
+  } catch {
+    return "both";
+  }
+}
+
+function initialFeedbackMode(): FeedbackMode {
+  if (typeof window === "undefined") return "both";
+  return isMuted() ? "visual" : loadStoredFeedbackMode();
+}
+
 /** Alışverişler arası nefes payı. */
 const EXCHANGE_GAP_MS = 900;
 const FEEDBACK_MS = 850;
@@ -115,7 +160,7 @@ type ExchangeRuntime = {
 export function VirtualSparring() {
   const [phase, setPhase] = useState<Phase>("intro");
   const [difficulty, setDifficulty] = useState<SparringDifficulty>("normal");
-  const [muted, setMuted] = useState(false);
+  const [feedbackMode, setFeedbackModeState] = useState<FeedbackMode>("both");
   const [error, setError] = useState<string | null>(null);
   const [calibrationState, setCalibrationState] = useState<GameCalibrationState | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -150,6 +195,8 @@ export function VirtualSparring() {
   /** Kalibrasyon ekranına girildiği an — "yine de başla" iznini zamanlar. */
   const calibrationStartedAtRef = useRef(0);
   const renderFrameRef = useRef<number | null>(null);
+  /** Çizim döngüsü ref'ten okur — state, o kapanışta güncel görünmez. */
+  const feedbackModeRef = useRef<FeedbackMode>("both");
 
   useEffect(() => {
     phaseRef.current = phase;
@@ -157,10 +204,26 @@ export function VirtualSparring() {
   useEffect(() => {
     countdownRef.current = countdown;
   }, [countdown]);
+  useEffect(() => {
+    feedbackModeRef.current = feedbackMode;
+  }, [feedbackMode]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMuted(initialMuted());
+    setFeedbackModeState(initialFeedbackMode());
+  }, []);
+
+  /** Geri bildirim modu değişince paylaşılan sustur bayrağını da senkronlar. */
+  const changeFeedbackMode = useCallback((next: FeedbackMode) => {
+    setFeedbackModeState(next);
+    setMuted(next === "visual");
+    if (next !== "visual") {
+      try {
+        window.localStorage.setItem(FEEDBACK_MODE_KEY, next);
+      } catch {
+        /* localStorage kapalı olabilir — mod yine de bu oturumda geçerli kalır */
+      }
+    }
   }, []);
 
   const stopPipeline = useCallback(() => {
@@ -513,6 +576,8 @@ export function VirtualSparring() {
         const impact = impactAge < 320 ? 1 - impactAge / 320 : 0;
         if (impact === 0) impactAtRef.current = null;
         const scaledTarget = runtime ? scaleTarget(runtime.target, size) : null;
+        // "Sadece ses" modunda cue/sonuç metni ekrana sızmaz — kulağa güvenilir.
+        const hideTextCue = feedbackModeRef.current === "audio";
 
         renderOpponentScene(canvas, {
           pose:
@@ -521,9 +586,12 @@ export function VirtualSparring() {
               : idlePose(now),
           action: frame?.action ?? "IDLE",
           threat: frame?.threat ?? 0,
-          cueLabel: active && runtime && runtime.resolvedAtMs === null ? runtime.stimulus.cueLabel : null,
+          cueLabel:
+            !hideTextCue && active && runtime && runtime.resolvedAtMs === null
+              ? runtime.stimulus.cueLabel
+              : null,
           cueColor: runtime?.stimulus.cueColor ?? "#f5c400",
-          feedback: feedbackRef.current,
+          feedback: hideTextCue ? null : feedbackRef.current,
           countdown: phaseRef.current === "countdown" ? (countdownRef.current ?? 0) : null,
           camera:
             counterChannel && scaledTarget
@@ -588,8 +656,8 @@ export function VirtualSparring() {
       <IntroScreen
         difficulty={difficulty}
         onDifficulty={setDifficulty}
-        muted={muted}
-        onMutedChange={setMuted}
+        feedbackMode={feedbackMode}
+        onFeedbackModeChange={changeFeedbackMode}
         onStart={startFight}
       />
     );
@@ -638,7 +706,7 @@ export function VirtualSparring() {
           </h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <SoundControls muted={muted} onMutedChange={setMuted} compact />
+          <FeedbackModeSwitch mode={feedbackMode} onChange={changeFeedbackMode} compact />
           <button
             type="button"
             onClick={quit}
@@ -691,6 +759,51 @@ export function VirtualSparring() {
         </aside>
       </div>
     </main>
+  );
+}
+
+/** Üç kademeli geri bildirim anahtarı — ses/görsel kombinasyonunu seçtirir. */
+function FeedbackModeSwitch({
+  mode,
+  onChange,
+  compact = false,
+  className = "",
+}: {
+  mode: FeedbackMode;
+  onChange: (mode: FeedbackMode) => void;
+  compact?: boolean;
+  className?: string;
+}) {
+  const modes: FeedbackMode[] = ["both", "audio", "visual"];
+  return (
+    <div
+      role="group"
+      aria-label="Geri bildirim modu"
+      title={FEEDBACK_MODE_HINTS[mode]}
+      className={`flex overflow-hidden rounded-lg border border-white/15 ${className}`}
+    >
+      {modes.map((value) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => {
+            // Kullanıcı hareketi — ses motorları yalnızca burada açılabilir.
+            if (value !== "visual") initAudio();
+            onChange(value);
+          }}
+          aria-pressed={mode === value}
+          className={`font-black uppercase tracking-wider transition ${
+            compact ? "px-2.5 py-2 text-[10px]" : "px-3 py-2 text-xs"
+          } ${
+            mode === value
+              ? "bg-brand-yellow text-black"
+              : "bg-white/[.04] text-zinc-400 hover:text-white"
+          }`}
+        >
+          {compact ? FEEDBACK_MODE_SHORT_LABELS[value] : FEEDBACK_MODE_LABELS[value]}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -749,14 +862,14 @@ function CalibrationOverlay({
 function IntroScreen({
   difficulty,
   onDifficulty,
-  muted,
-  onMutedChange,
+  feedbackMode,
+  onFeedbackModeChange,
   onStart,
 }: {
   difficulty: SparringDifficulty;
   onDifficulty: (value: SparringDifficulty) => void;
-  muted: boolean;
-  onMutedChange: (value: boolean) => void;
+  feedbackMode: FeedbackMode;
+  onFeedbackModeChange: (value: FeedbackMode) => void;
   onStart: () => void;
 }) {
   return (
@@ -800,12 +913,16 @@ function IntroScreen({
         </div>
 
         <div className="mt-6 border-t border-white/10 pt-5">
-          <p className="text-xs font-black uppercase tracking-[.22em] text-zinc-500">Ses</p>
-          <SoundControls muted={muted} onMutedChange={onMutedChange} className="mt-3" />
-          <p className="mt-2 text-xs text-zinc-500">
-            Komutlar hem sesli okunur hem ekranda yazar; rakibin saldırısı ayrı
-            bir efektle duyulur.
+          <p className="text-xs font-black uppercase tracking-[.22em] text-zinc-500">
+            Geri bildirim
           </p>
+          <FeedbackModeSwitch mode={feedbackMode} onChange={onFeedbackModeChange} className="mt-3" />
+          {feedbackMode !== "visual" && (
+            // Ses açıkken hangi Türkçe sesin okuyacağını seçtirir — sustur
+            // düğmesi burada gereksiz, yukarıdaki anahtar onun yerini tutuyor.
+            <SoundControls muted={false} onMutedChange={() => {}} hideMuteButton className="mt-3" />
+          )}
+          <p className="mt-2 text-xs text-zinc-500">{FEEDBACK_MODE_HINTS[feedbackMode]}</p>
         </div>
 
         <button

@@ -23,6 +23,13 @@ model User {
   profile           Profile?
   organizationUsers OrganizationUser[]
   member            Member?
+  notifications     Notification[]
+
+  /// Sorumlusu olduğu sporcular — antrenör paneli bu bağa göre kısıtlanır.
+  coachedMembers Member[]           @relation("MemberCoach")
+  compensation   CoachCompensation? @relation("CoachCompensation")
+  earnings       CoachEarning[]     @relation("CoachEarnings")
+  payouts        CoachPayout[]      @relation("CoachPayouts")
 }
 
 model Profile {
@@ -49,81 +56,117 @@ model Organization {
   planTemplates     PlanTemplate[]
   membershipPlans   MembershipPlan[]
   trainingSlots     TrainingSlot[]
+  notifications     Notification[]
+  nutritionPlans    NutritionPlan[]
+  ranks             Rank[]
+  waiverTemplates   WaiverTemplate[]
+  auditLogs         AuditLog[]
+
+  payments           Payment[]
+  expenses           Expense[]
+  recurringExpenses  RecurringExpense[]
+  coachCompensations CoachCompensation[]
+  coachEarnings      CoachEarning[]
+  coachPayouts       CoachPayout[]
 }
 
 model Branch {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   name           String
   slug           String
   address        String?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
 
   members          Member[]
   trainingSessions TrainingSession[]
   trainingSlots    TrainingSlot[]
+  expenses         Expense[]
 
   @@unique([organizationId, slug])
 }
 
-// role: member | staff
+// role: member | coach | admin
+//   member → sporcu paneli (/uye)
+//   coach  → antrenör paneli (/personel): kendi sporcuları, ders saatleri, planlar
+//   admin  → yönetici paneli (/yonetim): salon geneli — antrenör, paket, rapor
+// Yöneticinin antrenör panelinde de yetkisi vardır (bkz. lib/auth/roles.ts).
 // status: invited | active | disabled
 model OrganizationUser {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   role           String
-  status         String   @default("active")
-  createdAt      DateTime @default(now())
+  status         String       @default("active")
+  createdAt      DateTime     @default(now())
 
   @@unique([organizationId, userId])
 }
 
 // status: lead | active | inactive | blocked
 model Member {
-  id             String   @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  homeBranchId   String?
-  homeBranch     Branch?  @relation(fields: [homeBranchId], references: [id])
-  userId         String?  @unique
-  user           User?    @relation(fields: [userId], references: [id])
-  memberNo       String
-  fullName       String
-  email          String?
-  phone          String?
-  status         String   @default("active")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                  String       @id @default(cuid())
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  homeBranchId        String?
+  homeBranch          Branch?      @relation(fields: [homeBranchId], references: [id])
+  userId              String?      @unique
+  user                User?        @relation(fields: [userId], references: [id])
+  /// Sorumlu antrenör. Antrenör panelinde herkes YALNIZ kendi sporcusunu
+  /// görür (yönetici hepsini). Sporcuyu ekleyen antrenör buraya yazılır;
+  /// yönetici /yonetim/uyeler ekranından devredebilir.
+  assignedCoachUserId String?
+  assignedCoach       User?        @relation("MemberCoach", fields: [assignedCoachUserId], references: [id])
+  memberNo            String
+  fullName            String
+  email               String?
+  phone               String?
+  status              String       @default("active")
+  /// Ders hatırlatmaları kapatılabilir — sporcu profilinden ya da antrenörden.
+  remindersEnabled    Boolean      @default(true)
+  /// KVKK talebiyle kimlik alanları silindiyse dolar — kayıt istatistik için kalır.
+  anonymizedAt        DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
-  checkIns            CheckIn[]
-  trainingLogs        TrainingLog[]
+  checkIns             CheckIn[]
+  trainingLogs         TrainingLog[]
   performanceSnapshots PerformanceSnapshot[]
-  pointEvents         PointEvent[]
-  badges              MemberBadge[]
-  memberPlans         MemberPlan[]
-  subscriptions       MemberSubscription[]
-  weightEntries       WeightEntry[]
-  weightGoals         WeightGoal[]
-  slotBookings        SlotBooking[]
+  pointEvents          PointEvent[]
+  badges               MemberBadge[]
+  memberPlans          MemberPlan[]
+  subscriptions        MemberSubscription[]
+  weightEntries        WeightEntry[]
+  weightGoals          WeightGoal[]
+  slotBookings         SlotBooking[]
+  invites              MemberInvite[]
+  notifications        Notification[]
+  nutritionPlans       NutritionPlan[]
+  mealChecks           MealCheck[]
+  rankAwards           MemberRank[]
+  requirementChecks    RequirementCheck[]
+  waivers              MemberWaiver[]
+  payments             Payment[]
+  coachEarnings        CoachEarning[]
 
   @@unique([organizationId, memberNo])
+  @@index([organizationId, assignedCoachUserId])
 }
 
 // status: submitted | reviewed
 model CheckIn {
-  id             String   @id @default(cuid())
-  memberId       String
-  member         Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  weekStart      DateTime
-  answersJson    String // JSON.stringify({ trainingAdherence, sleepQuality, stressLevel, energyLevel, enjoyment, sorenessFlag, note })
-  status         String   @default("submitted")
-  createdAt      DateTime @default(now())
-  reviewedAt     DateTime?
+  id               String    @id @default(cuid())
+  memberId         String
+  member           Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  weekStart        DateTime
+  answersJson      String // JSON.stringify({ trainingAdherence, sleepQuality, stressLevel, energyLevel, enjoyment, sorenessFlag, note })
+  status           String    @default("submitted")
+  createdAt        DateTime  @default(now())
+  reviewedAt       DateTime?
   reviewedByUserId String?
 
   @@unique([memberId, weekStart])
@@ -131,27 +174,27 @@ model CheckIn {
 
 // type: boks | kickbox | fight_prep | kondisyon
 model TrainingSession {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   branchId       String?
-  branch         Branch?  @relation(fields: [branchId], references: [id])
+  branch         Branch?      @relation(fields: [branchId], references: [id])
   type           String
   scheduledAt    DateTime
   coachUserId    String?
   notes          String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime     @default(now())
 
   logs TrainingLog[]
 }
 
 model TrainingLog {
-  id              String   @id @default(cuid())
+  id              String           @id @default(cuid())
   memberId        String
-  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member          Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
   sessionId       String?
   session         TrainingSession? @relation(fields: [sessionId], references: [id])
-  loggedAt        DateTime @default(now())
+  loggedAt        DateTime         @default(now())
   type            String // boks | kickbox | fight_prep | kondisyon (session yoksa serbest log)
   durationMinutes Int
   rounds          Int?
@@ -185,11 +228,11 @@ model PointEvent {
 }
 
 model MemberBadge {
-  id         String   @id @default(cuid())
-  memberId   String
-  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  badgeKey   String
-  awardedAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  badgeKey  String
+  awardedAt DateTime @default(now())
 
   @@unique([memberId, badgeKey])
 }
@@ -204,18 +247,18 @@ model MemberBadge {
 // kind: antrenman | kondisyon
 // level: baslangic | orta | ileri
 model PlanTemplate {
-  id              String   @id @default(cuid())
+  id              String       @id @default(cuid())
   organizationId  String
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   name            String
   kind            String
   level           String
-  weeks           Int      @default(4)
+  weeks           Int          @default(4)
   summary         String?
-  isActive        Boolean  @default(true)
+  isActive        Boolean      @default(true)
   createdByUserId String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
   days        PlanDay[]
   assignments MemberPlan[]
@@ -224,13 +267,13 @@ model PlanTemplate {
 }
 
 model PlanDay {
-  id           String   @id @default(cuid())
-  templateId   String
-  template     PlanTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  weekNumber   Int      // 1..weeks
-  dayOfWeek    Int      // 1 = Pazartesi … 7 = Pazar
-  focus        String   // "Ped & kombinasyon", "Sparring", "Aktif dinlenme"
-  notes        String?
+  id         String       @id @default(cuid())
+  templateId String
+  template   PlanTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  weekNumber Int // 1..weeks
+  dayOfWeek  Int // 1 = Pazartesi … 7 = Pazar
+  focus      String // "Ped & kombinasyon", "Sparring", "Aktif dinlenme"
+  notes      String?
 
   items       PlanItem[]
   completions PlanCompletion[]
@@ -240,10 +283,10 @@ model PlanDay {
 
 // kind: teknik | torba | ped | sparring | kondisyon | kuvvet | esneme
 model PlanItem {
-  id              String   @id @default(cuid())
+  id              String  @id @default(cuid())
   dayId           String
-  day             PlanDay  @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  position        Int      // gün içindeki sıra
+  day             PlanDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  position        Int // gün içindeki sıra
   kind            String
   label           String
   /// src/data/techniques.ts içindeki teknik slug'ı (varsa)
@@ -259,15 +302,15 @@ model PlanItem {
 
 // status: aktif | tamamlandi | iptal
 model MemberPlan {
-  id               String   @id @default(cuid())
+  id               String       @id @default(cuid())
   memberId         String
-  member           Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member           Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
   templateId       String
   template         PlanTemplate @relation(fields: [templateId], references: [id])
   startDate        DateTime // haftanın Pazartesi'si (UTC)
-  status           String   @default("aktif")
+  status           String       @default("aktif")
   assignedByUserId String?
-  createdAt        DateTime @default(now())
+  createdAt        DateTime     @default(now())
 
   completions PlanCompletion[]
 
@@ -275,12 +318,12 @@ model MemberPlan {
 }
 
 model PlanCompletion {
-  id            String   @id @default(cuid())
+  id            String     @id @default(cuid())
   memberPlanId  String
   memberPlan    MemberPlan @relation(fields: [memberPlanId], references: [id], onDelete: Cascade)
   dayId         String
-  day           PlanDay  @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  completedAt   DateTime @default(now())
+  day           PlanDay    @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  completedAt   DateTime   @default(now())
   trainingLogId String?
 
   @@unique([memberPlanId, dayId])
@@ -291,21 +334,21 @@ model PlanCompletion {
 // ─────────────────────────────────────────────────────────────
 
 model MembershipPlan {
-  id              String   @id @default(cuid())
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name            String
-  description     String?
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
   /// Kuruş cinsinden. Paket tanımının bir parçası — uygulamada ödeme/tahsilat
   /// takibi YOK, bu alan yalnız "paket ne kadar" bilgisidir.
-  priceMinor      Int
-  currency        String   @default("TRY")
+  priceMinor     Int
+  currency       String       @default("TRY")
   /// Paketin geçerlilik süresi (gün).
-  durationDays    Int
+  durationDays   Int
   /// Pakette kaç ders var. `null` = sınırsız (süre boyunca serbest).
-  totalSessions   Int?
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
+  totalSessions  Int?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
 
   subscriptions MemberSubscription[]
 
@@ -314,19 +357,25 @@ model MembershipPlan {
 
 // status: aktif | bitti | donduruldu | iptal
 model MemberSubscription {
-  id         String   @id @default(cuid())
-  memberId   String
-  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  planId     String
-  plan       MembershipPlan @relation(fields: [planId], references: [id])
-  startDate  DateTime
-  endDate    DateTime
-  status     String   @default("aktif")
+  id            String         @id @default(cuid())
+  memberId      String
+  member        Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  planId        String
+  plan          MembershipPlan @relation(fields: [planId], references: [id])
+  startDate     DateTime
+  endDate       DateTime
+  status        String         @default("aktif")
   /// Satın alındığı andaki ders adedi — paket sonradan değişirse geçmiş
   /// abonelikler etkilenmesin diye kopyalanır. `null` = sınırsız.
   sessionsTotal Int?
-  note       String?
-  createdAt  DateTime @default(now())
+  /// Bu üyelik için ANLAŞILAN tutar (kuruş). Paketin etiket fiyatından
+  /// kopyalanır; indirim yapıldıysa elle düşürülür. Borç = tutar − tahsilat.
+  priceMinor    Int            @default(0)
+  currency      String         @default("TRY")
+  note          String?
+  createdAt     DateTime       @default(now())
+
+  payments Payment[]
 
   @@index([memberId, status])
   @@index([endDate])
@@ -345,22 +394,22 @@ model MemberSubscription {
 // kind: boks | kickbox | fight_prep | kondisyon | teknik
 // status: acik | iptal | tamamlandi
 model TrainingSlot {
-  id              String   @id @default(cuid())
+  id              String       @id @default(cuid())
   organizationId  String
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   branchId        String?
-  branch          Branch?  @relation(fields: [branchId], references: [id])
+  branch          Branch?      @relation(fields: [branchId], references: [id])
   coachUserId     String
   startsAt        DateTime
-  durationMinutes Int      @default(60)
+  durationMinutes Int          @default(60)
   /// Kaç sporcu alabilir. 1 = birebir; antrenör onayıyla artar.
-  capacity        Int      @default(1)
+  capacity        Int          @default(1)
   kind            String
   title           String?
   notes           String?
-  status          String   @default("acik")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  status          String       @default("acik")
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
   bookings SlotBooking[]
 
@@ -373,14 +422,14 @@ model TrainingSlot {
 //         reddedildi | iptal
 //         katildi | gelmedi — seans sonrası yoklama
 model SlotBooking {
-  id              String   @id @default(cuid())
+  id              String       @id @default(cuid())
   slotId          String
   slot            TrainingSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
   memberId        String
-  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  status          String   @default("onayli")
+  member          Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  status          String       @default("onayli")
   note            String?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime     @default(now())
   decidedAt       DateTime?
   decidedByUserId String?
   /// Katılım işaretlenince oluşan antrenman kaydı — geri alınırsa silinir.
@@ -406,15 +455,542 @@ model WeightEntry {
 
 // status: aktif | ulasildi | iptal
 model WeightGoal {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   memberId    String
-  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
   targetKg    Float
   /// src/data/weight-classes.ts içindeki sıklet slug'ı
   weightClass String?
   fightDate   DateTime?
-  status      String   @default("aktif")
-  createdAt   DateTime @default(now())
+  status      String    @default("aktif")
+  createdAt   DateTime  @default(now())
 
   @@index([memberId, status])
+}
+
+// ─────────────────────────────────────────────────────────────
+// DAVET — koç üye ekler, üye kendi şifresini belirler
+//
+// Personel artık geçici şifre yazmıyor: üye kaydı hesapsız açılır
+// (`Member.userId = null`), tek kullanımlık bir davet bağlantısı üretilir
+// ve sporcu `/davet/<token>` üzerinden kendi şifresini kurar.
+//
+// Token veritabanında AÇIK tutulmaz — yalnız SHA-256 özeti saklanır
+// (`tokenHash`); bağlantı bir kez üretilir, ekranda gösterilir, kaybolursa
+// yenisi çıkarılır ve eskisi geçersizleşir.
+// ─────────────────────────────────────────────────────────────
+
+// status: bekliyor | kullanildi | iptal
+model MemberInvite {
+  id              String    @id @default(cuid())
+  memberId        String
+  member          Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  tokenHash       String    @unique
+  email           String
+  status          String    @default("bekliyor")
+  expiresAt       DateTime
+  usedAt          DateTime?
+  createdByUserId String?
+  createdAt       DateTime  @default(now())
+
+  @@index([memberId, status])
+  @@index([expiresAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// BİLDİRİM & HATIRLATMA
+//
+// Tek tablo hem kuyruk hem geçmiş: satır oluştuğunda "gönderilecek",
+// kanal teslim edince `sentAt` dolar, sporcu okuyunca `readAt`.
+//
+// `dedupeKey` aynı hatırlatmanın iki kez düşmesini engeller — zamanlanmış
+// iş günde birkaç kez çalışsa da (ya da elle tetiklense de) her rezervasyon
+// için "akşam" ve "gün içi" hatırlatması birer kez üretilir.
+// Anahtar deseni: "<kind>:<ilgiliKayitId>:<YYYY-MM-DD>".
+// ─────────────────────────────────────────────────────────────
+
+// kind:    src/domain/notifications/kinds.ts
+// channel: uygulama | eposta | whatsapp
+// status:  bekliyor | gonderildi | basarisiz
+model Notification {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Alıcı hesap. Hesabı henüz kurulmamış üyeye bildirim düşmez.
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Bildirimin konusu olan sporcu — antrenöre giden bildirimlerde de dolu.
+  memberId       String?
+  member         Member?      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  kind           String
+  title          String
+  body           String
+  /// Panelde tıklanınca gidilecek yol (ör. "/uye/derslerim").
+  href           String?
+  channel        String       @default("uygulama")
+  status         String       @default("bekliyor")
+  dedupeKey      String       @unique
+  /// Ne zaman gösterilmeli/gönderilmeli — geçmiş tarihli satır hemen gider.
+  scheduledFor   DateTime     @default(now())
+  sentAt         DateTime?
+  readAt         DateTime?
+  error          String?
+  createdAt      DateTime     @default(now())
+
+  @@index([userId, readAt])
+  @@index([status, scheduledFor])
+  @@index([organizationId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// BESLENME PLANLARI (Kong Academy'nin `nutrition_plans` modeli)
+//
+// Plan → Öğün → Besin. Sporcu öğünü "yedim" diye işaretler (`MealCheck`),
+// böylece antrenör uyum yüzdesini görür. Kalori/makro alanları opsiyonel:
+// dövüşçüde çoğu zaman "sıklet öncesi ne yiyeceğim" listesi yeterli.
+//
+// Haftalık döngü (carb cycling) için `dayType` + `weekDaysCsv`: aynı
+// `groupKey` altındaki planlar bir haftalık takım oluşturur.
+// ─────────────────────────────────────────────────────────────
+
+// status: taslak | aktif | arsiv
+// dayType: antrenman | dinlenme | tarti-haftasi | serbest
+model NutritionPlan {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberId        String
+  member          Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  title           String
+  goal            String?
+  status          String       @default("taslak")
+  startDate       DateTime?
+  dailyCalories   Int?
+  proteinG        Int?
+  carbsG          Int?
+  fatG            Int?
+  notes           String?
+  /// Haftalık takım anahtarı — aynı değeri taşıyan planlar tek program.
+  groupKey        String?
+  dayType         String?
+  /// Planın geçerli olduğu günler: "1,3,5" (1 = Pazartesi).
+  weekDaysCsv     String?
+  createdByUserId String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  meals NutritionMeal[]
+
+  @@index([memberId, status])
+  @@index([organizationId, status])
+  @@index([groupKey])
+}
+
+model NutritionMeal {
+  id        String        @id @default(cuid())
+  planId    String
+  plan      NutritionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  position  Int
+  title     String
+  /// "08:00", "Antrenman sonrası" gibi serbest etiket.
+  timeLabel String?
+  notes     String?
+  createdAt DateTime      @default(now())
+
+  foods  NutritionFood[]
+  checks MealCheck[]
+
+  @@index([planId, position])
+}
+
+model NutritionFood {
+  id           String        @id @default(cuid())
+  mealId       String
+  meal         NutritionMeal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  position     Int
+  name         String
+  /// "150 g", "1 kase" — ölçü serbest metin, birim zorlanmıyor.
+  amount       String?
+  calories     Int?
+  proteinG     Float?
+  carbsG       Float?
+  fatG         Float?
+  /// "yulaf yerine pirinç" — sporcunun elindekiyle idare edebilmesi için.
+  alternatives String?
+  notes        String?
+
+  @@index([mealId, position])
+}
+
+/// Sporcunun "bu öğünü yedim" işareti — gün bazında, geri alınabilir.
+model MealCheck {
+  id        String        @id @default(cuid())
+  memberId  String
+  member    Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  mealId    String
+  meal      NutritionMeal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  /// Salon saatiyle takvim günü, UTC gece yarısına sabitlenmiş.
+  logDate   DateTime
+  createdAt DateTime      @default(now())
+
+  @@unique([memberId, mealId, logDate])
+  @@index([memberId, logDate])
+}
+
+// ─────────────────────────────────────────────────────────────
+// KUŞAK / DERECE & MÜFREDAT
+//
+// Dövüş salonunun "seviye" ekseni: sporcu hangi kuşakta, bir sonrakine ne
+// kalmış. Merdiven salona özeldir (`order` ile sıralı) — boks salonu üç
+// kademeyle yetinir, kickbox salonu on kuşak tanımlar.
+//
+// Terfi ASLA otomatik verilmez: sayaçlar ("16 ders", "8 hafta") ve teknik
+// listesi yalnız *hazır mı* sorusunu yanıtlar; kararı antrenör imzalar
+// (`MemberRank`). Bu, kaynak alınan obikai'nin "rank engine deterministik
+// değerlendirir, kararı insan verir" kuralının aynısıdır.
+// ─────────────────────────────────────────────────────────────
+
+model Rank {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Merdivendeki sıra — 0 = başlangıç kuşağı. Sıra değişirse geçmiş bozulmaz.
+  order          Int
+  name           String
+  slug           String
+  /// Kuşağın rengi (#RRGGBB) — panelde şerit/rozet olarak görünür.
+  color          String       @default("#facc15")
+  summary        String?
+  /// Bu kuşağa geçmek için gereken en az ders sayısı (yoklaması alınmış).
+  minSessions    Int          @default(0)
+  /// Bir önceki terfiden sonra geçmesi gereken en az hafta.
+  minWeeks       Int          @default(0)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+
+  requirements RankRequirement[]
+  awards       MemberRank[]
+
+  @@unique([organizationId, slug])
+  @@unique([organizationId, order])
+  @@index([organizationId, order])
+}
+
+// kind: teknik | kondisyon | katilim | sinav
+model RankRequirement {
+  id            String  @id @default(cuid())
+  rankId        String
+  rank          Rank    @relation(fields: [rankId], references: [id], onDelete: Cascade)
+  position      Int
+  kind          String
+  label         String
+  /// src/data/techniques.ts içindeki teknik slug'ı (varsa)
+  techniqueSlug String?
+  notes         String?
+
+  checks RequirementCheck[]
+
+  @@index([rankId, position])
+}
+
+/// Antrenörün "bu sporcu bu maddeyi geçti" işareti — geri alınabilir.
+model RequirementCheck {
+  id              String          @id @default(cuid())
+  memberId        String
+  member          Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  requirementId   String
+  requirement     RankRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  checkedAt       DateTime        @default(now())
+  checkedByUserId String?
+  note            String?
+
+  @@unique([memberId, requirementId])
+  @@index([memberId])
+}
+
+/// Terfi kaydı — append-only. Sporcunun güncel kuşağı = en son verilen.
+model MemberRank {
+  id              String   @id @default(cuid())
+  memberId        String
+  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  rankId          String
+  rank            Rank     @relation(fields: [rankId], references: [id])
+  awardedAt       DateTime @default(now())
+  awardedByUserId String?
+  note            String?
+
+  @@unique([memberId, rankId])
+  @@index([memberId, awardedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// ONAM & SAĞLIK BEYANI (waiver)
+//
+// Salonun hukuki tarafı: sağlık beyanı, sorumluluk reddi, 18 yaş altı için
+// veli izni, KVKK aydınlatma metni. Metnin `version`'ı değişince eski imza
+// "güncelliğini yitirdi" sayılır ve sporcudan yeniden istenir — imza silinmez.
+//
+// İmza elektronik bir onaydır: sporcu metni okur, adını yazar, kutuyu
+// işaretler. Islak imza yerine geçtiği iddiası yoktur; salonun elinde
+// "ne zaman, hangi sürümü, kim onayladı" kaydı olur.
+// ─────────────────────────────────────────────────────────────
+
+// kind: saglik | sorumluluk | veli-izni | kvkk
+model WaiverTemplate {
+  id               String       @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  kind             String
+  title            String
+  /// Metnin sürümü — arttığında mevcut imzalar "eski" olur.
+  version          Int          @default(1)
+  body             String
+  /// Sağlık beyanındaki evet/hayır soruları: JSON.stringify(string[]).
+  questionsJson    String?
+  /// 18 yaş altı sporcuda veli adı/telefonu zorunlu mu.
+  requiresGuardian Boolean      @default(false)
+  /// Her sporcudan isteniyor mu; kapalıysa yalnız elle imzalatılır.
+  isRequired       Boolean      @default(true)
+  isActive         Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  signatures MemberWaiver[]
+
+  @@index([organizationId, isActive])
+}
+
+// status: imzalandi | iptal
+model MemberWaiver {
+  id            String         @id @default(cuid())
+  memberId      String
+  member        Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  templateId    String
+  template      WaiverTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  /// İmzalandığı andaki metin sürümü — şablon güncellenince kıyaslanır.
+  version       Int
+  signedName    String
+  signedAt      DateTime       @default(now())
+  birthDate     DateTime?
+  guardianName  String?
+  guardianPhone String?
+  /// Sağlık sorularının yanıtları: JSON.stringify({ soru: "evet"|"hayir", ... }).
+  answersJson   String?
+  /// "Evet" yanıtı ya da serbest metin varsa antrenörün okuması gereken not.
+  healthNote    String?
+  status        String         @default("imzalandi")
+
+  @@unique([memberId, templateId, version])
+  @@index([memberId, status])
+  @@index([templateId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// DENETİM KAYDI (audit log)
+//
+// "Bu sporcunun üyeliğini kim iptal etti", "yoklamayı kim değiştirdi",
+// "kuşağı kim verdi" sorularının tek yanıt yeri. Yalnız *yazan* işlemler
+// düşer — okuma kaydı tutulmaz.
+//
+// `actorLabel` çağrı anında kopyalanır: personel hesabı sonradan silinse
+// bile kaydın kim tarafından yapıldığı okunabilir kalsın.
+// ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorUserId    String?
+  actorLabel     String
+  /// "uye.eklendi", "uyelik.iptal", "kusak.terfi" — nokta ayraçlı sabit anahtar.
+  action         String
+  entityType     String
+  entityId       String?
+  summary        String
+  metaJson       String?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, action])
+  @@index([entityType, entityId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// MALİYE — tahsilat, gider ve antrenör hakedişi
+//
+// Faz 8'de ödeme takibi bilinçli olarak kaldırılmıştı ("para salonun kendi
+// yöntemiyle alınıyor"); Faz 12'de kullanıcı kararıyla geri geldi ve bu kez
+// salonun tamamını kapsıyor: kim ne ödedi, salon ne harcadı, antrenör ne
+// hak etti.
+//
+// Para her yerde **kuruş** (minor unit) tutulur — kayan nokta yok.
+// Rakamlar geçmişe dönük DEĞİŞMEZ: hakediş, doğduğu andaki orana göre
+// `CoachEarning` satırına yazılır; sonradan oran değişirse eski aylar
+// olduğu gibi kalır.
+// ─────────────────────────────────────────────────────────────
+
+/// Antrenörün nasıl kazandığı. Üç model bir arada çalışabilir: aynı antrenör
+/// hem ders başı ücret hem gelir payı alabilir (biri boşsa o kalem işlemez).
+///
+/// model: ders_basi | gelir_payi | sabit_maas | karma | yok
+///   ders_basi  → yoklamada "katıldı/gelmedi" işaretlenen her seans hakediş üretir
+///   gelir_payi → sporcusundan tahsilat girildiğinde tutarın yüzdesi yazılır
+///   sabit_maas → ay kapanışında tek kalem tahakkuk eder
+///   karma      → yukarıdakilerden dolu olan her kalem işler
+///   yok        → hakediş üretilmez (ör. salon sahibi)
+model CoachCompensation {
+  id                  String       @id @default(cuid())
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Bir kullanıcı tek salonda çalışır (bkz. getOrganizationMembership) —
+  /// bu yüzden ayar kaydı kullanıcı başına tektir.
+  coachUserId         String       @unique
+  coach               User         @relation("CoachCompensation", fields: [coachUserId], references: [id], onDelete: Cascade)
+  model               String       @default("yok")
+  /// Ders başı ücret (kuruş). Grup dersinde katılan sporcu başına değil,
+  /// **seans başına** ödenir — bkz. `src/domain/finance/earnings.ts`.
+  perSessionMinor     Int?
+  /// Gelir payı — baz puan (bps): %40 = 4000. Yüzdeyi ondalıkla yazabilmek için.
+  revenueShareBps     Int?
+  monthlySalaryMinor  Int?
+  /// Sözleşmedeki aylık ders hakkı (üst sınır). `null` = sınırsız. Rapor
+  /// "bu ay kaç ders verdi / hakkı ne kadar kaldı" için kullanır.
+  monthlySessionQuota Int?
+  currency            String       @default("TRY")
+  note                String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([organizationId])
+}
+
+/// Sporcudan alınan para. Bir üyeliğe (`subscriptionId`) bağlanırsa o
+/// üyeliğin borcundan düşer; bağlanmazsa serbest tahsilattır (ör. eldiven
+/// satışı, tek ders ücreti).
+///
+/// method: nakit | kart | havale | diger
+model Payment {
+  id               String              @id @default(cuid())
+  organizationId   String
+  organization     Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberId         String
+  member           Member              @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  subscriptionId   String?
+  subscription     MemberSubscription? @relation(fields: [subscriptionId], references: [id])
+  amountMinor      Int
+  currency         String              @default("TRY")
+  method           String              @default("nakit")
+  paidAt           DateTime
+  note             String?
+  recordedByUserId String?
+  createdAt        DateTime            @default(now())
+
+  earnings CoachEarning[]
+
+  @@index([organizationId, paidAt])
+  @@index([memberId, paidAt])
+  @@index([subscriptionId])
+}
+
+/// Salonun harcaması. category: kira | fatura | ekipman | maas | hakedis |
+/// vergi | temizlik | pazarlama | diger
+model Expense {
+  id               String       @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branchId         String?
+  branch           Branch?      @relation(fields: [branchId], references: [id])
+  category         String
+  title            String
+  amountMinor      Int
+  currency         String       @default("TRY")
+  spentAt          DateTime
+  note             String?
+  recordedByUserId String?
+  /// Otomatik üretildiyse kaynağı: "sabit:<templateId>:<yyyy-mm>" ya da
+  /// "hakedis:<payoutId>". Aynı kaynak ikinci kez gider yazamaz.
+  sourceKey        String?      @unique
+  createdAt        DateTime     @default(now())
+
+  payout CoachPayout?
+
+  @@index([organizationId, spentAt])
+  @@index([organizationId, category])
+}
+
+/// Her ay tekrarlayan sabit gider (kira, elektrik, internet, yazılım).
+/// "Bu ayı işle" düğmesi bunlardan `Expense` satırı üretir — iki kez
+/// basılırsa `sourceKey` sayesinde ikinci kez üretmez.
+model RecurringExpense {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  category       String
+  title          String
+  amountMinor    Int
+  currency       String       @default("TRY")
+  /// Ayın kaçında ödeniyor (1–28). Ayın son günlerini aşan değer 28'e çekilir.
+  dayOfMonth     Int          @default(1)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, isActive])
+}
+
+/// Antrenörün kazandığı tek bir kalem. Kaynağı ne olursa olsun **tutar
+/// dondurulur** — oran sonradan değişse de geçmiş ay aynı kalır.
+///
+/// sourceType: ders | gelir_payi | maas
+/// sourceKey : ders → SlotBooking.id · gelir_payi → Payment.id · maas → "yyyy-mm"
+/// status    : tahakkuk (hak edildi, ödenmedi) | odendi
+model CoachEarning {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  coachUserId    String
+  coach          User         @relation("CoachEarnings", fields: [coachUserId], references: [id], onDelete: Cascade)
+  memberId       String?
+  member         Member?      @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  sourceType     String
+  sourceKey      String
+  paymentId      String?
+  payment        Payment?     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  amountMinor    Int
+  currency       String       @default("TRY")
+  earnedAt       DateTime
+  note           String?
+  status         String       @default("tahakkuk")
+  payoutId       String?
+  payout         CoachPayout? @relation(fields: [payoutId], references: [id])
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, sourceType, sourceKey])
+  @@index([organizationId, coachUserId, earnedAt])
+  @@index([coachUserId, status])
+}
+
+/// Antrenöre yapılan ödeme. Kapsadığı `CoachEarning` satırlarını `odendi`
+/// yapar ve salon tarafında bir `Expense` satırı doğurur (çift kayıt değil,
+/// tek yönlü bağ: hakediş → gider).
+model CoachPayout {
+  id               String       @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  coachUserId      String
+  coach            User         @relation("CoachPayouts", fields: [coachUserId], references: [id], onDelete: Cascade)
+  periodStart      DateTime
+  periodEnd        DateTime
+  amountMinor      Int
+  currency         String       @default("TRY")
+  paidAt           DateTime
+  method           String       @default("havale")
+  note             String?
+  expenseId        String?      @unique
+  expense          Expense?     @relation(fields: [expenseId], references: [id])
+  recordedByUserId String?
+  createdAt        DateTime     @default(now())
+
+  earnings CoachEarning[]
+
+  @@index([organizationId, coachUserId, paidAt])
 }

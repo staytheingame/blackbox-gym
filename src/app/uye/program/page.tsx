@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentMember, getCurrentUser } from "@/lib/auth/guards";
+import { organizationScope } from "@/lib/auth/scope";
 import {
   SLOT_KIND_LABEL,
   getMembershipCredits,
@@ -58,7 +59,7 @@ export default async function MemberProgramPage({
   const to = new Date(from.getTime() + 7 * MS_PER_DAY);
 
   const [slots, credits] = await Promise.all([
-    listSlots(member.organizationId, { from, to }),
+    listSlots(organizationScope(member.organizationId), { from, to }),
     getMembershipCredits(member.id),
   ]);
 

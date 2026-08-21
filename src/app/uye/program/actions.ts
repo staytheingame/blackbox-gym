@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { getCurrentMember, getCurrentUser } from "@/lib/auth/guards";
 import { bookSlot, cancelBooking } from "@/lib/queries/slots";
 import { BOOKING_REFUSAL_MESSAGE } from "@/domain/booking/credits";
+import { enqueueNotification } from "@/lib/queries/notifications";
+import { dersSiradanYukseldi } from "@/domain/notifications/kinds";
+import { formatDateTimeTR } from "@/lib/date";
 
 function revalidateBookingViews(): void {
   revalidatePath("/uye/program");
@@ -47,13 +50,34 @@ export async function bookSlotAction(
   };
 }
 
-/** Kendi rezervasyonunu iptal eder — ders hakkı geri döner. */
+/**
+ * Kendi rezervasyonunu iptal eder — ders hakkı geri döner. Boşalan yere
+ * bekleme listesinden sıradaki sporcu geçer ve haberdar edilir.
+ */
 export async function cancelBookingAction(bookingId: string): Promise<void> {
   const user = await getCurrentUser();
   if (!user) return;
   const member = await getCurrentMember(user.id);
   if (!member) return;
 
-  await cancelBooking(member.id, bookingId);
+  const result = await cancelBooking(member.id, bookingId);
+
+  for (const promoted of result.promoted) {
+    if (!promoted.memberUserId) continue;
+    await enqueueNotification({
+      ...dersSiradanYukseldi({
+        bookingId: promoted.bookingId,
+        dateTimeLabel: formatDateTimeTR(promoted.startsAt),
+      }),
+      organizationId: promoted.organizationId,
+      userId: promoted.memberUserId,
+      memberId: promoted.memberId,
+    });
+  }
+
   revalidateBookingViews();
+  if (result.promoted.length > 0) {
+    revalidatePath("/uye/bildirimler");
+    revalidatePath("/personel/bildirimler");
+  }
 }

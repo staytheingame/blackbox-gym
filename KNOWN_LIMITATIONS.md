@@ -69,3 +69,73 @@
 - W15'in sekiz boyutlu profil puanları deneysel ve yalnız aynı atletin uyumlu seansları içindeki değişimi görünür kılmak içindir. Bilimsel norm, yetenek notu, sakatlık riski veya seçme/eleme kararı değildir.
 - Wrestling seansları bu sürümde browser IndexedDB'de kalır. Hesaplar arasında/cross-device senkronizasyon ve Supabase yedeği yoktur; tarayıcı verisi silinirse yerel geçmiş de silinir. JSON export kullanıcının açık indirme eylemidir.
 - Weekly Benchmark ve Coach Test kullanıcıyı hareket güvenliğinden muaf tutmaz. Ağrı, baş dönmesi, kaygan zemin, yetersiz alan veya tracking kaybında test durdurulmalıdır.
+
+## Bildirim & hatırlatma — 19 Ağustos 2026
+
+- **Zamanlanmış iş barındırmaya bağlıdır.** Hatırlatmalar `vercel.json`
+  içindeki cron ile `/api/cron/hatirlatici` çağrılarak üretilir (Istanbul
+  saatiyle 20:00 ve 09:00; dosyadaki saatler UTC yazılıdır). Vercel dışında
+  bir yere dağıtılırsa aynı ucu çağıran bir zamanlayıcı kurulmalıdır —
+  yoksa hatırlatma **hiç** üretilmez, uygulama bunu kendiliğinden fark etmez.
+  Yönetim panelindeki "Hatırlatmaları Şimdi Çalıştır" düğmesi elle telafi
+  eder ama otomatik değildir.
+- **`CRON_SECRET` yazılmazsa uç herkese açıktır.** Kötü niyetli çağrı veri
+  bozmaz (iş idempotenttir) ama bildirim kuyruğunu erken tetikleyebilir.
+- **E-posta ücretsiz katmanla sınırlıdır.** Brevo günde 300, Resend ayda
+  3.000 e-posta verir. Salon büyüdükçe (100 sporcu × 2 hatırlatma = günde
+  ~200 e-posta) sınıra yaklaşılır; kota dolduğunda bildirim uygulama içi
+  kutuda kalır, `status = "basarisiz"` ve sebep `error` alanına yazılır.
+  Kota takibi uygulamada yoktur — sağlayıcı panelinden izlenmelidir.
+- **WhatsApp ücretsiz değildir.** Kod tarafındaki dal hazırdır
+  (`src/lib/notifications/channels.ts`), ancak Meta/Twilio bu tür "utility"
+  konuşmaları başına ücret alır. Ayrıca gönderim için önceden onaylanmış
+  şablon gerekir; şu anki düz metin gövdesi yalnız 24 saatlik hizmet
+  penceresinde çalışır.
+- **Push bildirimi yok.** Telefon kapalıyken hatırlatma görünmez; sporcu
+  panele girdiğinde ya da e-postasına baktığında görür.
+- **Hesabını kurmamış sporcuya bildirim gitmez.** Davet bağlantısı
+  kullanılmadan `Member.userId` boş olduğu için gidecek hesap yoktur;
+  bu sporcular `/personel/davetler`'de ve "Bugün" ekranında "hesap
+  kurulmadı" etiketiyle görünür, antrenör elle arar.
+
+## Sporcu analizi — 19 Ağustos 2026
+
+- **Teşhis yok, ölçüm iddiası sınırlı.** Ekrandaki her sayı kayıtlardan
+  türetilir ve kaynağı yazılır. "Motivasyon", "disiplin" gibi kişilik
+  yorumları üretilmez.
+- **Veri azken yüzde üretilir ama güven düzeyi düşük işaretlenir.** Yeni
+  yazılmış beslenme planında uyum penceresi planın yaşıyla sınırlanır;
+  güven "yeterli" değilse bayrak çıkmaz ve devamlılık ortalamasına girmez.
+- **Antrenman hacmi yalnız sisteme giren kayıtları görür.** Salonda yapılıp
+  yoklaması alınmamış ya da elle girilmemiş antrenman "yok" sayılır; bu bir
+  ölçüm değil, kayıt eksikliğidir.
+
+## Koç kapsamı ve muhasebe — 20 Ağustos 2026
+
+- **Kapsam uygulama katmanındadır, veritabanında değil.** Antrenörün yalnız
+  kendi sporcusunu görmesi `src/lib/auth/scope.ts` üzerinden Prisma `where`
+  koşullarıyla sağlanır; Postgres RLS **yok**. Doğrudan veritabanına erişen
+  ya da kapsamı almayı unutan yeni bir sorgu bu kuralı delebilir. Yeni ekran
+  eklerken `memberWhere(scope)` / `slotWhere(scope)` kullanılmalıdır.
+- **Grup dersinde isim sızıntısı kalır (bilinçli).** Sporcular ortak tablodan
+  ders seçtiği için bir antrenörün seansına başka antrenörün sporcusu
+  kaydolabilir; o seansın yoklama listesinde bu sporcunun adı görünür. Dersi
+  veren kişinin kimi yoklayacağını bilmesi gerektiği için engellenmedi.
+- **Muhasebe tek kayıt (single entry) defteridir**, çift taraflı muhasebe
+  değildir. Fatura, KDV, e-arşiv, tevkifat, kur farkı ve resmî beyanname
+  desteği yoktur; mali müşavir yerine geçmez.
+- **Taksit planı yoktur.** Borç, anlaşılan tutar ile tahsilat toplamının
+  farkıdır; taksitli satış parça parça tahsilat girilerek yürütülür, vade
+  tarihi tutulmaz.
+- **Tek para birimi.** Alanlar `currency` taşısa da ekranlar TRY varsayar;
+  çoklu kur ve kur çevrimi yoktur.
+- **İade/iptal kaydı yoktur.** Yanlış girilen tahsilat silinerek geri alınır
+  (bağlı antrenör payı da silinir); negatif tutarlı düzeltme satırı desteği
+  yoktur, bu yüzden denetim izi silme kaydı üzerinden okunur.
+- **Sabit giderler otomatik işlenmez.** "Bu Ayı İşle" düğmesine basılması
+  gerekir; zamanlanmış iş (`/api/cron/hatirlatici`) bu adımı çalıştırmaz.
+- **Maaş tahakkuku da elle tetiklenir** ("Maaşları İşle"); ay kapanışında
+  otomatik değildir.
+- **Hakediş tutarları dondurulur.** Oran değişimi geçmişe işlemez — bu
+  bilinçlidir; geçmişi düzeltmek isteyen kullanıcı ilgili hakediş satırını
+  doğuran kaydı (tahsilat/yoklama) geri alıp yeniden girmelidir.

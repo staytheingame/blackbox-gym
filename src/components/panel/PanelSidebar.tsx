@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import {
+  PANEL_ROLE_HOME,
   PANEL_ROLE_LABEL,
   sectionForPath,
   sectionsForRole,
@@ -72,7 +73,7 @@ export function PanelSidebar({
       >
         <div className="flex items-center gap-3 border-b border-brand-border px-5 py-5">
           <Link
-            href={role === "staff" ? "/personel" : "/uye"}
+            href={PANEL_ROLE_HOME[role]}
             className="font-display flex items-center gap-1 text-lg tracking-wide"
           >
             <span className="text-brand-white">BLACK</span>

@@ -115,6 +115,15 @@ export default async function MemberBookingsPage() {
                     <Pill tone={booking.status === "bekliyor" ? "neutral" : "yellow"}>
                       {BOOKING_STATUS_LABEL[booking.status]}
                     </Pill>
+                    {/* Bekleme listesindeki sıra: yer boşalırsa antrenör
+                        onayı beklemeden sıradaki kişi otomatik geçer. */}
+                    {booking.queuePosition !== null && (
+                      <Pill
+                        title="Yer açılırsa sırayla geçilir; sana bildirim gelir."
+                      >
+                        Sırada {booking.queuePosition}.
+                      </Pill>
+                    )}
                     {cancellable ? (
                       <form
                         action={cancelBookingAction.bind(null, booking.bookingId)}

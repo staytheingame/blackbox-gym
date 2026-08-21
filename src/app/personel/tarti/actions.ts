@@ -5,8 +5,9 @@ import { revalidatePath } from "next/cache";
 import {
   getCurrentUser,
   requireStaff,
-  requireStaffScopeForMember,
+  requireMemberInScope,
 } from "@/lib/auth/guards";
+import { staffScopeFor } from "@/lib/auth/scope";
 import { addWeightEntry, setWeightGoal } from "@/lib/queries/weight";
 import { weightClasses } from "@/data/weight-classes";
 
@@ -40,8 +41,8 @@ export async function addWeightForMemberAction(
     return { error: parsed.error.issues[0]?.message ?? "Form geçersiz." };
   }
 
-  const member = await requireStaffScopeForMember(
-    membership.organizationId,
+  const member = await requireMemberInScope(
+    staffScopeFor(membership, user.id),
     parsed.data.memberId,
   );
 
@@ -96,8 +97,8 @@ export async function setGoalForMemberAction(
     return { error: parsed.error.issues[0]?.message ?? "Form geçersiz." };
   }
 
-  const member = await requireStaffScopeForMember(
-    membership.organizationId,
+  const member = await requireMemberInScope(
+    staffScopeFor(membership, user.id),
     parsed.data.memberId,
   );
 

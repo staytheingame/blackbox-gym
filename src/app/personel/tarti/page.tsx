@@ -5,6 +5,7 @@ import {
   getCurrentUser,
   requireOrganizationMembership,
 } from "@/lib/auth/guards";
+import { staffScopeFor } from "@/lib/auth/scope";
 import { listMemberWeights } from "@/lib/queries/weight";
 import { CUT_STATUS_LABEL } from "@/domain/weight/cut";
 import { weightClassBySlug } from "@/data/weight-classes";
@@ -30,8 +31,9 @@ export default async function StaffWeightPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/giris");
   const membership = await requireOrganizationMembership(user.id);
+  const scope = staffScopeFor(membership, user.id);
 
-  const rows = await listMemberWeights(membership.organizationId, {
+  const rows = await listMemberWeights(scope, {
     staleDays: STALE_DAYS,
   });
 

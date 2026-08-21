@@ -5,6 +5,7 @@ import {
   getCurrentUser,
   requireOrganizationMembership,
 } from "@/lib/auth/guards";
+import { staffScopeFor } from "@/lib/auth/scope";
 import {
   SLOT_KIND_LABEL,
   listSlotsNeedingAttendance,
@@ -27,8 +28,9 @@ export default async function StaffAttendancePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/giris");
   const membership = await requireOrganizationMembership(user.id);
+  const scope = staffScopeFor(membership, user.id);
 
-  const slots = await listSlotsNeedingAttendance(membership.organizationId);
+  const slots = await listSlotsNeedingAttendance(scope);
 
   return (
     <PanelPage

@@ -4,8 +4,9 @@ import { PanelShell } from "@/components/panel/PanelShell";
 import {
   getCurrentMember,
   getCurrentUser,
-  requireOrganizationMembership,
+  getOrganizationMembership,
 } from "@/lib/auth/guards";
+import { homePathForRole } from "@/lib/auth/roles";
 import { fetchMemberBadges } from "@/lib/queries/nav-badges";
 
 export default async function MemberLayout({
@@ -19,13 +20,15 @@ export default async function MemberLayout({
   const member = await getCurrentMember(user.id);
   if (!member) {
     // Personel hesabının üye kaydı yok — giriş ekranına değil kendi paneline.
-    const membership = await requireOrganizationMembership(user.id).catch(
-      () => null,
-    );
-    redirect(membership?.role === "staff" ? "/personel" : "/giris");
+    const membership = await getOrganizationMembership(user.id);
+    redirect(membership ? homePathForRole(membership.role) : "/giris");
   }
 
-  const badges = await fetchMemberBadges(member.id);
+  const badges = await fetchMemberBadges(
+    member.id,
+    user.id,
+    member.organizationId,
+  );
 
   return (
     <PanelShell

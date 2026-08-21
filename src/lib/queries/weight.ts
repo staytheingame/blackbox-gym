@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { memberWhere, type StaffScope } from "@/lib/auth/scope";
 import { computeCutPlan, weeklyTrendKg, type CutPlan } from "@/domain/weight/cut";
 
 export type WeightSummary = {
@@ -89,14 +90,14 @@ export type StaffWeightRow = {
  * (`react-hooks/purity`) tarih hesabı render'a taşınmaz.
  */
 export async function listMemberWeights(
-  organizationId: string,
+  scope: StaffScope,
   { trendWindow = 6, staleDays = 10 }: {
     trendWindow?: number;
     staleDays?: number;
   } = {},
 ): Promise<StaffWeightRow[]> {
   const rows = await prisma.member.findMany({
-    where: { organizationId, status: { in: ["active", "lead"] } },
+    where: memberWhere(scope, { status: { in: ["active", "lead"] } }),
     orderBy: { fullName: "asc" },
     select: {
       id: true,

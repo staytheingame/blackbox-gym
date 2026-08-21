@@ -1,13 +1,22 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { getWeekStartInstant } from "@/lib/date";
+import { slotWhere, type StaffScope } from "@/lib/auth/scope";
 import {
   evaluateBooking,
   summarizeCredits,
   type BookingRefusal,
   type BookingStatus,
 } from "@/domain/booking/credits";
+import {
+  promotableFromWaitlist,
+  waitlistPosition,
+} from "@/domain/booking/waitlist";
 import { logTraining, revertTrainingLog } from "@/lib/queries/performance";
+import {
+  recordSessionEarning,
+  revokeSessionEarning,
+} from "@/lib/queries/finance";
 
 export const SLOT_KINDS = [
   "boks",
@@ -179,13 +188,18 @@ const slotInclude = {
   },
 } as const;
 
-/** Belirli bir aralıktaki tüm slotlar — haftalık tablo bunu kullanır. */
+/**
+ * Belirli bir aralıktaki slotlar — haftalık tablo bunu kullanır.
+ *
+ * Kapsam antrenörse yalnız **kendi açtığı** seanslar döner; yönetici salonun
+ * tamamını görür (bkz. `src/lib/auth/scope.ts`).
+ */
 export async function listSlots(
-  organizationId: string,
+  scope: StaffScope,
   { from, to }: { from: Date; to: Date },
 ): Promise<SlotView[]> {
   const rows = await prisma.trainingSlot.findMany({
-    where: { organizationId, startsAt: { gte: from, lt: to } },
+    where: slotWhere(scope, { startsAt: { gte: from, lt: to } }),
     orderBy: { startsAt: "asc" },
     include: slotInclude,
   });
@@ -196,17 +210,16 @@ export async function listSlots(
 
 /** Yoklaması alınmamış geçmiş seanslar — en yeni başta. */
 export async function listSlotsNeedingAttendance(
-  organizationId: string,
+  scope: StaffScope,
   { limit = 30 }: { limit?: number } = {},
 ): Promise<SlotView[]> {
   const now = new Date();
   const rows = await prisma.trainingSlot.findMany({
-    where: {
-      organizationId,
+    where: slotWhere(scope, {
       status: "acik",
       startsAt: { lt: now },
       bookings: { some: { status: "onayli" } },
-    },
+    }),
     orderBy: { startsAt: "desc" },
     take: limit,
     include: slotInclude,
@@ -215,24 +228,21 @@ export async function listSlotsNeedingAttendance(
   return rows.map((row) => toSlotView(row, now));
 }
 
-export async function countPendingBookings(
-  organizationId: string,
-): Promise<number> {
+export async function countPendingBookings(scope: StaffScope): Promise<number> {
   return prisma.slotBooking.count({
-    where: { status: "bekliyor", slot: { organizationId, status: "acik" } },
+    where: { status: "bekliyor", slot: slotWhere(scope, { status: "acik" }) },
   });
 }
 
 export async function countSlotsNeedingAttendance(
-  organizationId: string,
+  scope: StaffScope,
 ): Promise<number> {
   return prisma.trainingSlot.count({
-    where: {
-      organizationId,
+    where: slotWhere(scope, {
       status: "acik",
       startsAt: { lt: new Date() },
       bookings: { some: { status: "onayli" } },
-    },
+    }),
   });
 }
 
@@ -255,12 +265,12 @@ export type PendingRequest = {
 
 /** Grup dersi katılım istekleri — antrenörün onay kuyruğu. */
 export async function listPendingRequests(
-  organizationId: string,
+  scope: StaffScope,
 ): Promise<PendingRequest[]> {
   const rows = await prisma.slotBooking.findMany({
     where: {
       status: "bekliyor",
-      slot: { organizationId, status: "acik", startsAt: { gte: new Date() } },
+      slot: slotWhere(scope, { status: "acik", startsAt: { gte: new Date() } }),
     },
     orderBy: { createdAt: "asc" },
     include: {
@@ -302,6 +312,8 @@ export type MemberBookingView = {
   capacity: number;
   /** Aynı seanstaki diğer sporcular (grup dersiyse). */
   others: string[];
+  /** Bekleme listesindeyse kaçıncı sırada (1 = ilk); değilse `null`. */
+  queuePosition: number | null;
 };
 
 export async function listMemberBookings(
@@ -327,6 +339,19 @@ export async function listMemberBookings(
     others: row.slot.bookings
       .filter((b) => b.memberId !== memberId && SEAT_STATUSES.includes(b.status))
       .map((b) => b.member.fullName),
+    queuePosition:
+      row.status === "bekliyor"
+        ? waitlistPosition(
+            row.slot.bookings
+              .filter((b) => b.status === "bekliyor")
+              .map((b) => ({
+                bookingId: b.id,
+                memberId: b.memberId,
+                requestedAt: b.createdAt,
+              })),
+            row.id,
+          )
+        : null,
   }));
 }
 
@@ -392,6 +417,11 @@ export async function createSlots(input: CreateSlotInput): Promise<number> {
 /** Seansı iptal eder; kayıtlı sporcuların rezervasyonu da iptal olur
  *  (hakları geri döner — iptal hak yakmaz). */
 export async function cancelSlot(slotId: string): Promise<void> {
+  const slot = await prisma.trainingSlot.findUnique({
+    where: { id: slotId },
+    select: { organizationId: true },
+  });
+
   await prisma.$transaction([
     prisma.slotBooking.updateMany({
       where: { slotId, status: { in: ["onayli", "bekliyor"] } },
@@ -402,14 +432,19 @@ export async function cancelSlot(slotId: string): Promise<void> {
       data: { status: "iptal" },
     }),
   ]);
+
+  // Yapılmayan ders hakediş doğurmaz — ödenmemiş kalem geri alınır.
+  if (slot) await revokeSessionEarning(slot.organizationId, slotId);
 }
 
-export async function findSlotInOrganization(
-  slotId: string,
-  organizationId: string,
-) {
+/**
+ * Slotu **kapsam içinde** bulur: yönetici salonun her seansına, antrenör
+ * yalnız kendi açtığı seansa dokunabilir. Bulunamazsa `null` — çağıran yer
+ * "yetkin yok" der.
+ */
+export async function findSlotInScope(scope: StaffScope, slotId: string) {
   return prisma.trainingSlot.findFirst({
-    where: { id: slotId, organizationId },
+    where: slotWhere(scope, { id: slotId }),
     include: slotInclude,
   });
 }
@@ -473,11 +508,106 @@ export async function bookSlot(
   return { ok: true, kind: decision.kind };
 }
 
-/** Sporcu kendi rezervasyonunu iptal eder — hakkı geri döner. */
+// ── Bekleme listesi ───────────────────────────────────────────
+
+export type PromotedBooking = {
+  bookingId: string;
+  memberId: string;
+  memberName: string;
+  /** Hesabını kurmamış sporcuya bildirim düşmez. */
+  memberUserId: string | null;
+  organizationId: string;
+  startsAt: Date;
+};
+
+/**
+ * Seansta yer açıldıysa bekleme listesinin başındaki sporcuları onaylıya
+ * çeker — antrenör onayı beklemeden, çünkü kontenjan zaten vardı.
+ *
+ * Kontenjanı ASLA büyütmez: birebir seansı grup dersine çevirmek
+ * antrenörün kararıdır (`approveRequest`). Burada yalnız boşalan yer
+ * kadar sporcu yükselir.
+ */
+export async function promoteWaitlist(
+  slotId: string,
+): Promise<PromotedBooking[]> {
+  const slot = await prisma.trainingSlot.findUnique({
+    where: { id: slotId },
+    include: {
+      bookings: {
+        include: {
+          member: {
+            select: { id: true, fullName: true, userId: true, organizationId: true },
+          },
+        },
+      },
+    },
+  });
+  if (!slot) return [];
+
+  const takenSeats = slot.bookings.filter((booking) =>
+    SEAT_STATUSES.includes(booking.status),
+  ).length;
+
+  const waiting = slot.bookings.filter((booking) => booking.status === "bekliyor");
+
+  const promotable = promotableFromWaitlist({
+    capacity: slot.capacity,
+    takenSeats,
+    waitlist: waiting.map((booking) => ({
+      bookingId: booking.id,
+      memberId: booking.memberId,
+      requestedAt: booking.createdAt,
+    })),
+    slotStartsAt: slot.startsAt,
+    slotStatus: slot.status,
+    now: new Date(),
+  });
+  if (promotable.length === 0) return [];
+
+  const ids = promotable.map((entry) => entry.bookingId);
+  const updated = await prisma.slotBooking.updateMany({
+    where: { id: { in: ids }, status: "bekliyor" },
+    data: { status: "onayli", decidedAt: new Date() },
+  });
+  if (updated.count === 0) return [];
+
+  return promotable.flatMap((entry) => {
+    const booking = waiting.find((row) => row.id === entry.bookingId);
+    if (!booking) return [];
+    return [
+      {
+        bookingId: booking.id,
+        memberId: booking.member.id,
+        memberName: booking.member.fullName,
+        memberUserId: booking.member.userId,
+        organizationId: booking.member.organizationId,
+        startsAt: slot.startsAt,
+      },
+    ];
+  });
+}
+
+export type CancelBookingResult = {
+  ok: boolean;
+  /** İptal yer açtıysa kuyruktan yükselenler — çağıran bildirim gönderir. */
+  promoted: PromotedBooking[];
+};
+
+/**
+ * Sporcu kendi rezervasyonunu iptal eder — hakkı geri döner ve boşalan
+ * yere bekleme listesinden sıradaki sporcu geçer.
+ */
 export async function cancelBooking(
   memberId: string,
   bookingId: string,
-): Promise<boolean> {
+): Promise<CancelBookingResult> {
+  const booking = await prisma.slotBooking.findFirst({
+    where: { id: bookingId, memberId },
+    select: { slotId: true },
+  });
+  if (!booking) return { ok: false, promoted: [] };
+
   const result = await prisma.slotBooking.updateMany({
     where: {
       id: bookingId,
@@ -486,7 +616,9 @@ export async function cancelBooking(
     },
     data: { status: "iptal", decidedAt: new Date() },
   });
-  return result.count > 0;
+  if (result.count === 0) return { ok: false, promoted: [] };
+
+  return { ok: true, promoted: await promoteWaitlist(booking.slotId) };
 }
 
 // ── Onay & yoklama (antrenör) ─────────────────────────────────
@@ -580,6 +712,17 @@ export async function markAttendance(
       decidedByUserId,
       trainingLogId,
     },
+  });
+
+  // Ders verilmiş sayılır (gelmeyen de salonun saatini tutmuştur) — seansı
+  // AÇAN antrenörün hakedişi burada doğar. Seans başına tek satırdır;
+  // grup dersinde ikinci sporcu ikinci ödeme üretmez.
+  await recordSessionEarning({
+    organizationId: booking.slot.organizationId,
+    slotId: booking.slotId,
+    coachUserId: booking.slot.coachUserId,
+    memberId: booking.slot.capacity === 1 ? booking.memberId : null,
+    earnedAt: booking.slot.startsAt,
   });
 
   return true;

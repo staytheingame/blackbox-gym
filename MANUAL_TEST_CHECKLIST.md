@@ -81,3 +81,118 @@ Bu liste, gerçek webcam ve fiziksel kullanıcı gerektiren ve bu geliştirme or
 ## Sonuç kaydı
 
 Bu kontrol listesi tamamlandığında `19_FULL_ACCEPTANCE_GATES.md` içindeki ilgili fazların MANUAL_HARDWARE_GATE satırı `PASS` olarak güncellenmeli ve hangi tarihte, hangi tarayıcı/donanımla yürütüldüğü not edilmelidir. Kısmi tamamlanma `MANUAL_VERIFICATION_PENDING` olarak kalmaya devam eder.
+
+## Faz 9 — davet, hatırlatma, beslenme, analiz, yönetim
+
+Seed hesapları: `yonetici@blackbox.test`, `personel@blackbox.test`,
+`uye@blackbox.test` — hepsinin şifresi `test1234`.
+
+### Davetle üye kaydı
+- [ ] Antrenör olarak `/personel/uyeler` → ad, e-posta gir → "Ekle ve Davet
+      Bağlantısı Üret". Bağlantı kutusu çıkıyor ve adres **tam** (http ile
+      başlıyor), göreli değil.
+- [ ] "Hazır Mesajı Kopyala" panoya sporcunun adıyla bir metin koyuyor.
+- [ ] Bağlantıyı gizli sekmede aç → ad düzenlenebiliyor, e-posta kilitli.
+- [ ] 8 karakterden kısa şifre reddediliyor; iki şifre farklıysa uyarıyor.
+- [ ] Şifre kurulunca **doğrudan** `/uye` açılıyor (tekrar giriş istemiyor).
+- [ ] Aynı bağlantı ikinci kez açılınca "Bağlantı kullanılmış" diyor.
+- [ ] `/personel/davetler` hesabını kurmayanları listeliyor; "Yeni Bağlantı
+      Üret" eskisini iptal edip yenisini veriyor.
+
+### Ders hatırlatma
+- [ ] Sporcu olarak yarına bir ders kap (`/uye/program`).
+- [ ] Yönetici olarak `/yonetim/bildirimler` → "Hatırlatmaları Şimdi Çalıştır".
+      Sonuç satırında kaç hatırlatma üretildiği yazıyor.
+- [ ] Sporcunun `/uye/bildirimler` kutusunda "Yarın … dersin var" görünüyor.
+- [ ] Aynı düğmeye tekrar basınca **ikinci kez düşmüyor** (dedupe).
+- [ ] Sporcu "Kapat" ile hatırlatmayı kapatınca yeni hatırlatma üretilmiyor.
+- [ ] `/personel/bugun` → sporcunun yanındaki "Hatırlat" düğmesi elden
+      bildirim gönderiyor ("Gitti" yazısı çıkıyor).
+- [ ] Hesabını kurmamış sporcuda "Hatırlatılamaz" görünüyor.
+
+### Günün akışı & yoklama
+- [ ] `/personel/bugun` gün gezinmesi (önceki/sonraki/bugün) çalışıyor.
+- [ ] "Geldi" işareti antrenman kaydı üretiyor (sporcunun performans kartı
+      ve puanı güncelleniyor).
+- [ ] "Gelmedi" ders hakkını yakıyor, antrenman kaydı üretmiyor.
+
+### Beslenme
+- [ ] `/personel/beslenme` → plan oluştur → plan sayfasına yönlendiriyor.
+- [ ] Öğün ve besin ekleniyor; makro alanları boş bırakılabiliyor.
+- [ ] Plan "Taslak" iken sporcu görmüyor; "Yayına Al" sonrası görüyor.
+- [ ] Gün seçimi yapılmış plan yalnız o günlerde "Bugün" etiketli çıkıyor.
+- [ ] Sporcu "Yedim" işaretini koyup geri alabiliyor; sayaç güncelleniyor.
+
+### Sporcu analizi
+- [ ] `/personel/uyeler/<id>/analiz` açılıyor; veri yoksa uydurma yüzde
+      göstermiyor, "yorum yapacak veri yok" diyor.
+- [ ] Her bölümün altında "Kaynak: …" satırı var.
+- [ ] Yeni yazılmış beslenme planı "uyumsuz" bayrağı üretmiyor.
+
+### Yönetici paneli
+- [ ] Antrenör hesabıyla `/yonetim` açılmıyor, `/personel`'e yönlendiriyor.
+- [ ] `/yonetim/paketler` → paket ekleme, güncelleme, satıştan kaldırma.
+- [ ] `/yonetim/kadro` → antrenör ekleme, rol değiştirme; **son yönetici**
+      rolünü bırakamıyor ve hesabını kapatamıyor.
+- [ ] `/yonetim/raporlar` → 7/30/90 gün aralıkları, saat ve gün dağılımı.
+
+## Faz 12 — koç kapsamı, tahsilat ve muhasebe
+
+Bu bölüm **iki antrenör hesabı** gerektirir (A ve B) — kapsam ayrımı tek
+hesapla kanıtlanamaz. `/yonetim/kadro` ekranından ikinci bir antrenör aç.
+
+### Görünürlük kapsamı (en kritik)
+- [ ] A antrenörü sporcu eklediğinde sporcu **kendiliğinden A'ya** atanıyor.
+- [ ] B antrenörü `/personel/uyeler` listesinde A'nın sporcusunu **görmüyor**.
+- [ ] B, A'nın sporcusunun detay adresini (`/personel/uyeler/<id>`) elle
+      yazınca **404** alıyor (adres bilse bile açamıyor).
+- [ ] B'nin `/personel` genel bakış sayaçları yalnız kendi sporcularını sayıyor.
+- [ ] B'nin menü rozetleri (check-in, davet, onam, kuşak) A'nın sporcularından
+      beslenmiyor.
+- [ ] `/personel/program` her antrenöre **yalnız kendi açtığı** saatleri
+      gösteriyor; yoklama ve katılım istekleri de öyle.
+- [ ] Yönetici `/personel/uyeler` ekranında **hepsini** görüyor ve her satırda
+      sorumlu antrenör yazıyor.
+- [ ] `/yonetim/uyeler` satırındaki açılır menüden devir yapılınca sporcu
+      eski antrenörün listesinden düşüyor, yenisinde çıkıyor.
+
+### Hakediş ayarı
+- [ ] `/yonetim/kadro` → antrenör satırındaki "Hakediş" bölümü açılıyor.
+- [ ] Model "Ders başı" seçilince yalnız ders başı alanı, "Karma" seçilince
+      üçü birden görünüyor.
+- [ ] Tutar boş bırakılıp kaydedilirse hata veriyor ("Ders başı ücret girilmeli").
+- [ ] Yüzde alanına 101 yazılırsa reddediyor.
+- [ ] Kaydedilen ayar satır başlığında özet olarak görünüyor.
+
+### Tahsilat ve borç
+- [ ] `/personel/uyelikler` → üyelik başlatırken anlaşılan tutar paketin
+      fiyatıyla doluyor; düşürülebiliyor.
+- [ ] "Şimdi alınan" boş bırakılınca üyelik satırında **borç** görünüyor.
+- [ ] Peşinat girilince satırda "kısmi ödeme" ve kalan tutar görünüyor.
+- [ ] `/personel/kasa` → A antrenörü yalnız **kendi** sporcularını listeliyor;
+      B'nin sporcusu açılır menüde yok.
+- [ ] Tahsilat girilince sporcu detayındaki ödeme çubuğu ilerliyor.
+- [ ] Üyelik süresi geçmiş ve borcu olan kayıt **"Gecikmiş"** görünüyor.
+
+### Antrenör hakedişi
+- [ ] Gelir payı tanımlı antrenörün sporcusundan tahsilat girilince hakediş
+      satırı doğuyor (tutar = tahsilatın yüzdesi).
+- [ ] Ders başı ücret tanımlıyken yoklama işaretlenince hakediş doğuyor;
+      **grup dersinde ikinci sporcuyu işaretlemek ikinci ödeme üretmiyor**.
+- [ ] "Gelmedi" işareti de hakediş üretiyor (salon saati tuttu).
+- [ ] Seans iptal edilince ödenmemiş ders hakedişi siliniyor.
+- [ ] `/yonetim/muhasebe/hakedis` → "Maaşları İşle" iki kez basılınca ikinci
+      kez tahakkuk **yazmıyor**.
+- [ ] "Öde" düğmesi hakedişleri "Ödendi" yapıyor ve `/yonetim/muhasebe/giderler`
+      listesinde "hakediş" kaleminde gider çıkıyor.
+- [ ] Otomatik doğan hakediş gideri elle **silinemiyor**.
+
+### Kasa ve dönemler
+- [ ] `/yonetim/muhasebe` → Günlük/Haftalık/Aylık geçişleri çalışıyor.
+- [ ] "‹" ile önceki döneme gidiliyor, "›" bugünden ileri gitmiyor.
+- [ ] Gece yarısından hemen sonra girilen tahsilat **ertesi güne** düşüyor
+      (salon saati, UTC değil).
+- [ ] Net = gelir − gider; zarar durumunda kart kırmızı vurguyla çıkıyor.
+- [ ] `/yonetim/muhasebe/giderler` → sabit gider ekleniyor; "Bu Ayı İşle"
+      ikinci kez basılınca mükerrer kayıt oluşmuyor.
+- [ ] Antrenör hesabıyla `/yonetim/muhasebe` açılmıyor.

@@ -297,6 +297,180 @@ sporcular ortak tablodan istediğini kapar:
 - Public `/uyelikler` sayfası da ders paketi diliyle güncellendi — vitrin ile
   panel aynı modeli anlatsın.
 
+## Yapıldı (Faz 12 — koç kapsamı, tahsilat ve salon muhasebesi)
+
+Kullanıcı isteği: **"koç ekleme-üye ekleme, her koçun kendi üyesini görmesi
+diğer üyeleri görmemesi, o üyelerin verdiği dersler, bunun mali tablosu, salon
+maliyesi/muhasebesi, günlük-haftalık-aylık, koçların ders hakları."**
+
+Bu, Faz 8'deki **"ödemeleri kaldır"** kararını (bkz. aşağıdaki Faz 8 bölümü)
+kullanıcı kararıyla geri alır. Paket etiket fiyatı zaten duruyordu; üzerine
+tahsilat, gider ve hakediş katmanı eklendi.
+
+### Kullanıcının verdiği kararlar (bu oturumda soruldu)
+
+| Soru | Karar |
+| --- | --- |
+| Hakediş modeli | **Hepsi seçilebilir**: ders başı / gelir payı / sabit maaş / karma |
+| Antrenör ne kadar para görsün | **Kendi hakedişi + kendi üyelerinin ödemeleri**; salon geneli yalnız yöneticide |
+| "Koçun kendi üyesi" nasıl belirlenir | **Atanmış koç alanı**; ekleyen otomatik atanır, yönetici devreder |
+
+### Görünürlük kapsamı (en kritik parça)
+
+`src/lib/auth/scope.ts` — `StaffScope` tek doğru kaynak:
+
+- `memberWhere(scope)` → sporcu listeleyen HER sorgu bunu alır.
+- `slotWhere(scope)` → ders saatleri ayrı eksen: antrenör **kendi açtığı**
+  seansı, yoklamasını ve katılım isteklerini görür.
+- `requireMemberInScope(scope, memberId)` — eski `requireStaffScopeForMember`
+  yalnız salon kontrolü yapıyordu, antrenör başkasının sporcusuna
+  yazabiliyordu; yerini aldı.
+
+Kapsam uygulanan yerler: personel genel bakış, sporcular, sporcu detayı
+(+ analiz), adaylar, davetler, check-inler, içgörüler, kuşaklar, tartı,
+onaylar, beslenme, üyelikler, ders programı/istekler/yoklama, menü rozetleri,
+CSV dışa aktarma. Yönetici ekranları `organizationScope()` ile salonun
+tamamını görür; sporcu ders programı bilerek salon genelidir (herkes tüm açık
+saatleri görüp seçebilsin).
+
+### Şema (migration `20260820100000_maliye_ve_koc_kapsami`)
+
+- `Member.assignedCoachUserId` — sorumlu antrenör.
+- `MemberSubscription.priceMinor` / `currency` — anlaşılan tutar (indirim
+  yapılabilir); borç = tutar − tahsilat.
+- `Payment` — tahsilat; üyeliğe bağlı ya da serbest.
+- `Expense` + `RecurringExpense` — gider ve aylık sabit kalemler.
+- `CoachCompensation` — hakediş ayarı (ders başı / bps oranı / maaş / aylık
+  ders hakkı).
+- `CoachEarning` — doğduğu anda **dondurulmuş** hakediş satırı;
+  `@@unique([organizationId, sourceType, sourceKey])` mükerrer kaydı engeller
+  (ders → slot.id, gelir payı → payment.id, maaş → "userId:yyyy-mm").
+- `CoachPayout` — ödeme; kapsadığı hakedişleri `odendi` yapar ve bir `Expense`
+  satırı doğurur.
+
+### Ekranlar
+
+| Rol | Ekran | Ne yapar |
+| --- | --- | --- |
+| Personel | `/personel/kasa` | Kendi hakedişi, verdiği ders + kalan ders hakkı, kendi sporcularının borcu, tahsilat girişi |
+| Personel | `/personel/uyelikler` | Üyelik başlatırken anlaşılan tutar + peşin tahsilat; satırda ödeme durumu |
+| Personel | `/personel/uyeler/[id]` | Ödeme durumu kartı: borç çubuğu + tahsilat geçmişi |
+| Yönetici | `/yonetim/muhasebe` | Gelir/gider/net, kâr marjı, 6 dönemlik trend, gider kırılımı, antrenör dökümü |
+| Yönetici | `/yonetim/muhasebe/tahsilat` | Tahsilat girişi, borçlular, dönem kayıtları |
+| Yönetici | `/yonetim/muhasebe/giderler` | Sabit giderler + "bu ayı işle", tek seferlik gider, dönem kayıtları |
+| Yönetici | `/yonetim/muhasebe/hakedis` | Antrenör başına ders/hakediş/ders hakkı, maaş tahakkuku, ödeme |
+| Yönetici | `/yonetim/kadro` | Her antrenör satırında hakediş ayarı formu |
+| Yönetici | `/yonetim/uyeler` | Sporcu satırında antrenör devri + antrenör başına sporcu sayısı |
+
+### Kurallar (domain, 53 test)
+
+- Para **kuruş**; TR biçim/parse (`1.250,50` ve `1250.50` ikisi de okunur).
+- Ders başı hakediş **seans başına** doğar, katılan kişi başına değil.
+- "Gelmedi" de hakediş doğurur (salon o saati tuttu); seans iptali ödenmemiş
+  hakedişi geri alır.
+- Dönem sınırları salon saat diliminde ve **yarı açık** (`start <= t < end`).
+- Kasa antrenör hakedişini **ödendiği gün** gider yazar, tahakkuk gününde değil.
+
+## Yapıldı (Faz 10 — kuşak, onam, bekleme listesi, denetim, KVKK)
+
+Kaynak: altı açık kaynak salon/dojo yazılımının özellik setinin taranması
+(laragym, obikai, VoxelBooking, GYM-One, TajwarSaiyeed/gym-management-system,
+FO1ZZY/fitness-trainer-crm) ve BlackBox'ta karşılığı olmayanların seçilmesi.
+
+### Yeni tablolar (6) + 1 alan
+
+`Rank`, `RankRequirement`, `RequirementCheck`, `MemberRank`,
+`WaiverTemplate`, `MemberWaiver`, `AuditLog`; `Member.anonymizedAt`.
+Migration: `20260819200000_kusak_onam_denetim` — **canlı veritabanına
+uygulanmadı**, kullanıcı onayı bekliyor.
+
+### Kuşak & müfredat (obikai rank engine karşılığı)
+
+- Merdiven salona özel: `order` sıralı, renkli, ders/hafta eşikli.
+- Kuşak başına müfredat maddeleri (`teknik | kondisyon | katilim | sinav`),
+  istenirse `src/data/techniques.ts` teknik slug'ına bağlanır.
+- `src/domain/rank/progress.ts` (14 test) üç kapıyı **ayrı** okur:
+  müfredat / ders sayısı / süre. Yüzde bunların ortalamasıdır; eşiği sıfır
+  olan ölçüt yüzdeye karışmaz.
+- Terfi append-only (`MemberRank`), yanlış verilen terfi geri alınabilir.
+  Koşullar tamamlanmadan da terfi verilebilir — ekran uyarır, engellemez.
+- Ekranlar: `/personel/kusaklar` (merdiven + salon tablosu + kuşak/madde
+  ekleme), `/personel/kusaklar/<memberId>` (madde işaretleme + terfi),
+  `/uye/kusak` (kendi ilerlemesi + merdiven), sporcu detayında kuşak kartı,
+  üye ana sayfasında ilerleme şeridi.
+
+### Onam & sağlık beyanı (obikai waivers)
+
+- `WaiverTemplate` (sürümlü metin + evet/hayır soruları + veli zorunluluğu)
+  → `MemberWaiver` (imza, sürüm, veli bilgisi, sağlık yanıtları).
+- `src/domain/waivers/status.ts` (14 test): imzalı / eksik / **eski sürüm**
+  ayrımı, 18 yaş altı veli kontrolü, "evet" yanıtlarından sağlık notu.
+- Sürüm artırmak imzayı silmez; sporcudan yeniden onay ister.
+- Sağlık uyarısı antrenörün iki ekranında görünür: `/personel/onaylar` ve
+  sporcu detayı.
+- **Bilinçli sınır:** onam eksikliği rezervasyonu engellemez. Kapıya
+  çevirmek istenirse tek yer `src/lib/queries/slots.ts` içindeki
+  `bookSlot`.
+
+### Bekleme listesi (VoxelBooking waitlist)
+
+- Açık işti: "dolu saate istek gönderen sporcu, yer boşalınca haberdar
+  olmuyor". Artık `cancelBooking` yer açtığında kuyruğun başındaki sporcu
+  otomatik `onayli` olur ve `ders-siradan-yukseldi` bildirimi gider.
+- `src/domain/booking/waitlist.ts` (11 test): sıra ilk gelen ilk alır;
+  promosyon kontenjanı **büyütmez** (grup dersine çevirme kararı hâlâ
+  antrenörün), geçmiş/iptal seansta kimse yükselmez.
+- Sporcu `/uye/derslerim`'de kuyruktaki sırasını görür.
+
+### Denetim kaydı (laragym audit trail + VoxelBooking audit log)
+
+- `AuditLog`: kim (`actorLabel` çağrı anında kopyalanır), ne zaman, hangi
+  işlem, hangi kayıt, özet. Yalnız yazan işlemler; okuma kaydı yok.
+- Bağlandığı işlemler: sporcu ekleme, davet yenileme, üyelik başlatma ve
+  durum değişimi, seans açma/iptal, yoklama, katılım isteği onay/ret,
+  terfi ve geri alma, kuşak/müfredat tanımı, onam metni ve imzası, veri
+  dışa aktarma, anonimleştirme.
+- Kayıt yazılamazsa asıl işlem düşmez (denetim ikinci derecedir).
+- Ekran: `/yonetim/kayitlar` — işleme göre süzme + CSV.
+
+### Veri & KVKK (GYM-One raporları, FitCRM CSV, VoxelBooking/obikai GDPR)
+
+- `src/lib/export/csv.ts` (9 test): noktalı virgül ayracı, BOM ve Excel
+  formül enjeksiyonu koruması (`=`, `+`, `-`, `@` ile başlayan hücre
+  tırnaklanır).
+- Altı set: sporcular, yoklama, üyelikler, kuşaklar, onaylar, denetim —
+  `/api/export/<tür>`, personel yetkisiyle korunur, her indirme denetime
+  düşer.
+- `/api/kvkk/<memberId>`: sporcunun tüm kayıtları tek JSON. Sporcunun
+  kendisi ya da salon personeli çağırabilir; personel çağrısı denetime
+  düşer, sporcunun kendi verisini indirmesi düşmez.
+- Anonimleştirme (`/yonetim/kvkk`, yalnız yönetici): hesap silinir,
+  ad/e-posta/telefon, davetler, bildirimler, onam imzasındaki kimlik
+  bilgileri ve serbest metin notları temizlenir; ders/antrenman/tartı
+  sayıları kimliksiz kalır. Onay için sporcunun üye numarası elle
+  yazılır — **geri alınamaz**.
+
+### Yan işler
+
+- İki yeni bölüm bayrağı: `kusaklar`, `onaylar` (varsayılan açık).
+- Üç yeni menü rozeti: `rankReady`, `pendingWaivers` (personel),
+  `waiverDue` (üye).
+- Yeni bildirim türü: `ders-siradan-yukseldi`.
+- Yeni ikonlar: `BeltIcon`, `SignatureIcon`.
+- `techniqueBySlug` yardımcı fonksiyonu (`src/data/techniques.ts`).
+- Seed: 5 kuşaklı merdiven + müfredat, 4 onam metni, test üyesine beyaz
+  kuşak ve 2 işaretli madde.
+
+### Bilinçli olarak ALINMAYANLAR
+
+| Özellik | Kaynak | Neden |
+| --- | --- | --- |
+| Ödeme/tahsilat, fatura, Stripe | laragym, GYM-One, gym-management-system | Faz 8'de kullanıcı kararıyla kaldırılmıştı; para salonun kendi yöntemiyle alınıyor |
+| Hane/aile hesabı (household) | obikai | Tek sporcu modeli yeterli; veli bilgisi onam formunda toplanıyor |
+| Çok kiracılı SaaS, EU VAT | obikai | BlackBox tek salon |
+| Konaklama/etkinlik rezervasyon desenleri (resource/capacity/event) | VoxelBooking | Salonun modeli timeslot; diğer üçü karşılıksız |
+| Aylık takvim görünümü, toplu randevu ekleme | fitness-trainer-crm | Haftalık tablo + `repeatWeeks` aynı işi görüyor |
+
 ## Sonraki adımlar / açık işler
 
 ### Planlar/tartı modüllerinin kalan parçaları
@@ -309,8 +483,6 @@ sporcular ortak tablodan istediğini kapar:
   (ör. Vercel Cron → korumalı route handler) kurulmalı.
 - **Ders programının kalan parçaları:**
   - Seans hatırlatma bildirimi yok (üyeye "yarın 19:00 dersin var").
-  - Bekleme listesi yok: dolu bir saate katılım isteği antrenör onayına
-    gider, reddedilirse sporcu haberdar olmaz.
   - Antrenör seansı iptal edince sporcuya bildirim gitmiyor (hakkı geri
     dönüyor ama ekrana bakması gerekiyor).
   - Çoklu antrenör yok: slotlar `coachUserId` tutuyor ama panelde antrenör

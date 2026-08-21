@@ -5,6 +5,7 @@ import {
   getCurrentUser,
   requireOrganizationMembership,
 } from "@/lib/auth/guards";
+import { staffScopeFor } from "@/lib/auth/scope";
 import { getMemberDetail } from "@/lib/queries/staff";
 import { getScoreHistory } from "@/lib/queries/performance";
 import { computeMemberScorecard } from "@/domain/performance/scorecard";
@@ -28,11 +29,21 @@ import {
 } from "@/lib/queries/slots";
 import { summarizeProgress } from "@/domain/performance/progress";
 import { ProgressPanel } from "@/components/panel/ProgressPanel";
+import { getMemberRankState } from "@/lib/queries/ranks";
+import { getMemberWaivers } from "@/lib/queries/waivers";
+import { getMemberFinance } from "@/lib/queries/finance";
+import { PAYMENT_METHOD_LABEL } from "@/domain/finance/ledger";
+import { summarizeDue, DUE_STATUS_LABEL } from "@/domain/finance/dues";
+import { formatMinorTR } from "@/domain/finance/money";
+import { WAIVER_STATE_LABEL } from "@/domain/waivers/status";
 import { StaffTrainingLogForm } from "./StaffTrainingLogForm";
 import { AssignPlanForm } from "./AssignPlanForm";
 import { reviewCheckInAction } from "../../actions";
 
 export const metadata: Metadata = { title: "Üye Detayı — BlackBox Panel" };
+
+const financeLinkClass =
+  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 const typeLabels: Record<string, string> = {
   boks: "Boks",
@@ -52,8 +63,17 @@ export default async function StaffMemberDetailPage({
   if (!user) redirect("/giris");
   const membership = await requireOrganizationMembership(user.id);
 
+  const scope = staffScopeFor(membership, user.id);
+
   const detail = await getMemberDetail(id);
   if (!detail || detail.member.organizationId !== membership.organizationId) {
+    notFound();
+  }
+  // Antrenör yalnız kendi sporcusunun detayını açabilir (yönetici hepsini).
+  if (
+    scope.coachUserId &&
+    detail.member.assignedCoachUserId !== scope.coachUserId
+  ) {
     notFound();
   }
 
@@ -68,6 +88,9 @@ export default async function StaffMemberDetailPage({
     credits,
     attendanceRecords,
     snapshots,
+    rankState,
+    waivers,
+    finance,
   ] = await Promise.all([
     listPlanTemplates(membership.organizationId),
     getActiveMemberPlan(member.id, "antrenman"),
@@ -77,7 +100,15 @@ export default async function StaffMemberDetailPage({
     getMembershipCredits(member.id),
     listAttendanceRecords(member.id),
     getScoreHistory(member.id),
+    getMemberRankState(member.id, membership.organizationId),
+    getMemberWaivers(member.id, membership.organizationId),
+    getMemberFinance(member.id),
   ]);
+
+  // Beyanında "evet" işaretlenmiş maddeler — yüklenme kararından ÖNCE görülmeli.
+  const healthNotes = waivers.signatures
+    .map((signature) => signature.healthNote)
+    .filter((note): note is string => Boolean(note));
 
   const progress = summarizeProgress({
     bookings: attendanceRecords,
@@ -110,12 +141,26 @@ export default async function StaffMemberDetailPage({
         .filter(Boolean)
         .join(" · ")}
       action={
-        <Link
-          href="/personel/uyeler"
-          className="rounded-sm border border-brand-border px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow"
-        >
-          Üye Listesi
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/personel/uyeler/${member.id}/analiz`}
+            className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white"
+          >
+            Analiz
+          </Link>
+          <Link
+            href="/personel/beslenme"
+            className="rounded-sm border border-brand-border px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+          >
+            Beslenme
+          </Link>
+          <Link
+            href="/personel/uyeler"
+            className="rounded-sm border border-brand-border px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+          >
+            Üye Listesi
+          </Link>
+        </div>
       }
     >
       <div className="grid gap-5 sm:grid-cols-3">
@@ -256,6 +301,174 @@ export default async function StaffMemberDetailPage({
           currentPlans={currentPlans}
         />
       </PanelCard>
+
+      <PanelCard
+        title="Ödeme Durumu"
+        description="Bu sporcunun üyelik borcu ve tahsilat geçmişi."
+        action={
+          <Link href="/personel/kasa" className={financeLinkClass}>
+            Tahsilat Gir →
+          </Link>
+        }
+      >
+        {finance.subscriptions.length === 0 ? (
+          <EmptyState>Üyelik kaydı yok.</EmptyState>
+        ) : (
+          <ul className="space-y-3">
+            {finance.subscriptions
+              .filter((row) => row.priceMinor > 0)
+              .map((row) => {
+                const due = summarizeDue({
+                  priceMinor: row.priceMinor,
+                  paidMinor: row.paidMinor,
+                  endDate: row.endDate,
+                });
+                return (
+                  <li key={row.id} className="space-y-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <span className="font-semibold text-brand-white">
+                        {row.planName}
+                      </span>
+                      <span className="text-xs text-brand-muted">
+                        {formatMinorTR(row.paidMinor, row.currency)} /{" "}
+                        {formatMinorTR(row.priceMinor, row.currency)}
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-sm bg-brand-surface-2">
+                      <div
+                        className="h-full rounded-sm bg-brand-yellow"
+                        style={{ width: `${Math.round(due.ratio * 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-brand-muted">
+                      <span>
+                        {formatDateTR(row.startDate)} – {formatDateTR(row.endDate)}
+                      </span>
+                      <span
+                        className={
+                          due.status === "gecikti"
+                            ? "font-semibold text-red-400"
+                            : ""
+                        }
+                      >
+                        {DUE_STATUS_LABEL[due.status]}
+                        {due.balanceMinor > 0 &&
+                          ` · ${formatMinorTR(due.balanceMinor, row.currency)} kaldı`}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
+          </ul>
+        )}
+
+        {finance.payments.length > 0 && (
+          <ul className="mt-5 divide-y divide-brand-border border-t border-brand-border pt-3">
+            {finance.payments.slice(0, 8).map((row) => (
+              <li
+                key={row.id}
+                className="flex items-center justify-between gap-3 py-2 text-xs"
+              >
+                <span className="text-brand-muted">
+                  {formatDateTR(row.paidAt)} ·{" "}
+                  {PAYMENT_METHOD_LABEL[row.method]}
+                  {row.planName ? ` · ${row.planName}` : ""}
+                </span>
+                <span className="font-semibold text-brand-white">
+                  {formatMinorTR(row.amountMinor, row.currency)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </PanelCard>
+
+      {healthNotes.length > 0 && (
+        <div className="rounded-sm border border-red-400/40 bg-red-400/10 p-5 text-sm text-red-200">
+          <strong>Sağlık beyanı uyarısı:</strong> {healthNotes.join(" · ")}.
+          Yüklenme ve sparring kararını buna göre ver.
+        </div>
+      )}
+
+      {waivers.pendingCount > 0 && (
+        <PanelCard
+          title="Onam Eksik"
+          description="Sporcu kendi panelinden imzalar; sen buradan hangi formun beklediğini görürsün."
+          action={
+            <Link
+              href="/personel/onaylar"
+              className="rounded-sm border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+            >
+              Formlar
+            </Link>
+          }
+        >
+          <ul className="space-y-2">
+            {waivers.items
+              .filter((item) => item.state !== "imzali")
+              .map((item) => (
+                <li
+                  key={item.templateId}
+                  className="flex flex-wrap items-center justify-between gap-3 text-sm text-brand-white"
+                >
+                  <span>{item.title}</span>
+                  <Pill tone={item.state === "eksik" ? "danger" : "yellow"}>
+                    {WAIVER_STATE_LABEL[item.state]}
+                  </Pill>
+                </li>
+              ))}
+          </ul>
+        </PanelCard>
+      )}
+
+      {rankState && (
+        <PanelCard
+          title="Kuşak"
+          description={
+            rankState.nextRank
+              ? `Hedef: ${rankState.nextRank.name}`
+              : "Merdivenin sonunda"
+          }
+          action={
+            <Link
+              href={`/personel/kusaklar/${member.id}`}
+              className="rounded-sm border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+            >
+              Müfredat & terfi
+            </Link>
+          }
+        >
+          <div className="flex flex-wrap items-center gap-3">
+            <span
+              aria-hidden
+              className="inline-block h-6 w-6 rounded-sm border border-brand-border"
+              style={{
+                backgroundColor: rankState.currentRank?.color ?? "transparent",
+              }}
+            />
+            <span className="text-sm text-brand-white">
+              {rankState.currentRank?.name ?? "Henüz kuşağı yok"}
+            </span>
+            {rankState.progress && (
+              <>
+                <span className="h-1.5 w-28 rounded-sm bg-brand-surface-2">
+                  <span
+                    className="block h-1.5 rounded-sm bg-brand-yellow"
+                    style={{ width: `${rankState.progress.percent}%` }}
+                  />
+                </span>
+                {rankState.progress.ready ? (
+                  <Pill tone="yellow">Terfiye hazır</Pill>
+                ) : (
+                  <Pill>
+                    Eksik: {rankState.progress.missing.join(" · ") || "yok"}
+                  </Pill>
+                )}
+              </>
+            )}
+          </div>
+        </PanelCard>
+      )}
 
       <PanelCard title="Antrenman Logla">
         <StaffTrainingLogForm memberId={member.id} />

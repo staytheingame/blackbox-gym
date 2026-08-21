@@ -5,6 +5,7 @@ import {
   getCurrentUser,
   requireOrganizationMembership,
 } from "@/lib/auth/guards";
+import { staffScopeFor } from "@/lib/auth/scope";
 import { SLOT_KIND_LABEL, listPendingRequests } from "@/lib/queries/slots";
 import { formatDateTimeTR } from "@/lib/date";
 import {
@@ -23,8 +24,9 @@ export default async function StaffRequestsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/giris");
   const membership = await requireOrganizationMembership(user.id);
+  const scope = staffScopeFor(membership, user.id);
 
-  const requests = await listPendingRequests(membership.organizationId);
+  const requests = await listPendingRequests(scope);
 
   return (
     <PanelPage

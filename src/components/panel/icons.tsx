@@ -214,3 +214,54 @@ export function FlameIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function BellIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M15.5 14.5H4.5l1.2-2v-3.7a4.3 4.3 0 018.6 0V12.5z" />
+      <path d="M8.2 17a2 2 0 003.6 0" />
+    </svg>
+  );
+}
+
+export function AppleIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M10 6.5c-1-1.5-2.6-2-4-1.2-1.6 1-2 3.4-1 5.9.9 2.3 2.6 4.3 3.9 4.3.7 0 1-.4 1.6-.4s.9.4 1.6.4c1.3 0 3-2 3.9-4.3 1-2.5.6-4.9-1-5.9-1.4-.8-3-.3-4 1.2z" />
+      <path d="M10 6.5c.2-1.3 1.1-2.4 2.4-2.8" />
+    </svg>
+  );
+}
+
+/** Kuşak — bağlanmış kemer; derece merdiveni bölümü. */
+export function BeltIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M2.5 8.5h15v3h-15z" />
+      <path d="M8 11.5l-1.5 5 3-2 3 2-1.5-5" />
+      <path d="M10 8.5v3" />
+    </svg>
+  );
+}
+
+/** Onam/imza — imzalanmış belge; sağlık beyanı ve sorumluluk formları. */
+export function SignatureIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M5 2.5h7l3.5 3.5v7.5" />
+      <path d="M12 2.5V6h3.5" />
+      <path d="M4.5 17.5c1.5 0 1.5-4 3-4s1.5 3 3 3 2-2 4.5-2" />
+    </svg>
+  );
+}
+
+/** Kasa / para — muhasebe bölümü. */
+export function WalletIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M3.5 6.5h13v9h-13z" />
+      <path d="M3.5 6.5l9-2.5v2.5" />
+      <path d="M13.5 10.5h3v2h-3z" />
+    </svg>
+  );
+}

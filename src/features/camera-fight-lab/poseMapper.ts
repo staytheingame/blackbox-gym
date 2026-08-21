@@ -12,24 +12,37 @@ type PoseResultLike = {
   worldLandmarks?: LandmarkLike[][];
 };
 
+/**
+ * MediaPipe handedness (sol/sağ), girdi görüntüsünün AYNALANMIŞ (selfie/ön
+ * kamera) olduğunu varsayarak etiketlenir — bkz. Google'ın el/poz landmarker
+ * dokümantasyonu: "handedness is determined assuming the input image is
+ * mirrored... if it is not the case, swap the output". Bu uygulama modele
+ * HAM (aynalanmamış) video karesi veriyor — aynalama yalnızca gösterimde,
+ * `coordinates.ts`/CSS `scale-x-[-1]` katmanında uygulanıyor (bkz.
+ * poseClient.ts: `detectForVideo(video, …)`, hiç flip yok). Bu yüzden ham
+ * indeks 11 (MediaPipe'ın "left_shoulder"ı) burada aslında oyuncunun SAĞ
+ * omzuna denk geliyor. Aşağıdaki eşleme bunu telafi etmek için kasıtlı
+ * olarak ters çevrilmiş durumda; "düzeltmek" için ham indeksleri MediaPipe
+ * sırasına geri döndürmek sol/sağ'ı yeniden bozar.
+ */
 const INDEX = {
   nose: 0,
-  leftShoulder: 11,
-  rightShoulder: 12,
-  leftElbow: 13,
-  rightElbow: 14,
-  leftWrist: 15,
-  rightWrist: 16,
-  leftHip: 23,
-  rightHip: 24,
-  leftKnee: 25,
-  rightKnee: 26,
-  leftAnkle: 27,
-  rightAnkle: 28,
-  leftHeel: 29,
-  rightHeel: 30,
-  leftFootIndex: 31,
-  rightFootIndex: 32,
+  leftShoulder: 12,
+  rightShoulder: 11,
+  leftElbow: 14,
+  rightElbow: 13,
+  leftWrist: 16,
+  rightWrist: 15,
+  leftHip: 24,
+  rightHip: 23,
+  leftKnee: 26,
+  rightKnee: 25,
+  leftAnkle: 28,
+  rightAnkle: 27,
+  leftHeel: 30,
+  rightHeel: 29,
+  leftFootIndex: 32,
+  rightFootIndex: 31,
 } as const;
 
 const pointAt = (landmarks: LandmarkLike[] | undefined, index: number): Vec3 | undefined => {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, requireOrganizationMembership } from "@/lib/auth/guards";
+import { staffScopeFor } from "@/lib/auth/scope";
 import { listPendingCheckIns } from "@/lib/queries/staff";
 import { formatDateTR } from "@/lib/date";
 import { EmptyState, PanelCard, PanelPage, Pill } from "@/components/panel/ui";
@@ -15,7 +16,8 @@ export default async function StaffCheckInQueuePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/giris");
   const membership = await requireOrganizationMembership(user.id);
-  const pending = await listPendingCheckIns(membership.organizationId);
+  const scope = staffScopeFor(membership, user.id);
+  const pending = await listPendingCheckIns(scope);
 
   return (
     <PanelPage

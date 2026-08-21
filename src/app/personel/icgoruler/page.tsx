@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, requireOrganizationMembership } from "@/lib/auth/guards";
+import { staffScopeFor } from "@/lib/auth/scope";
 import { getMemberInsights, type MemberInsight } from "@/lib/queries/staff";
 import { formatDateTR } from "@/lib/date";
 import {
@@ -25,7 +26,8 @@ export default async function StaffInsightsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/giris");
   const membership = await requireOrganizationMembership(user.id);
-  const insights = await getMemberInsights(membership.organizationId);
+  const scope = staffScopeFor(membership, user.id);
+  const insights = await getMemberInsights(scope);
 
   const needsAttention = insights.filter((i) => i.flags.length > 0);
   const inactive = insights.filter((i) => i.flags.includes("antrenman-yok"));

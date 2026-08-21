@@ -27,10 +27,18 @@ type Props = {
   onMutedChange: (muted: boolean) => void;
   /** Ses seçiciyi gizlemek için (dar başlıklarda). */
   compact?: boolean;
+  /** Sustur düğmesini gizler — çağıran taraf kendi anahtarını gösterip sustur durumunu ayrıca yönetiyorsa (bkz. Sanal Rakip'in FeedbackModeSwitch'i). */
+  hideMuteButton?: boolean;
   className?: string;
 };
 
-export function SoundControls({ muted, onMutedChange, compact = false, className = "" }: Props) {
+export function SoundControls({
+  muted,
+  onMutedChange,
+  compact = false,
+  hideMuteButton = false,
+  className = "",
+}: Props) {
   const voices = useSyncExternalStore(
     subscribeVoices,
     getVoicesSnapshot,
@@ -65,18 +73,20 @@ export function SoundControls({ muted, onMutedChange, compact = false, className
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
-      <button
-        type="button"
-        onClick={toggle}
-        aria-pressed={!muted}
-        className={`rounded-lg border px-3 py-2 text-xs font-black uppercase tracking-wider transition ${
-          muted
-            ? "border-white/10 bg-white/[.04] text-zinc-400 hover:text-white"
-            : "border-brand-yellow bg-brand-yellow text-black"
-        }`}
-      >
-        {muted ? "Ses kapalı" : "Ses açık"}
-      </button>
+      {!hideMuteButton && (
+        <button
+          type="button"
+          onClick={toggle}
+          aria-pressed={!muted}
+          className={`rounded-lg border px-3 py-2 text-xs font-black uppercase tracking-wider transition ${
+            muted
+              ? "border-white/10 bg-white/[.04] text-zinc-400 hover:text-white"
+              : "border-brand-yellow bg-brand-yellow text-black"
+          }`}
+        >
+          {muted ? "Ses kapalı" : "Ses açık"}
+        </button>
+      )}
 
       {showPicker && voices.length > 0 && (
         <select

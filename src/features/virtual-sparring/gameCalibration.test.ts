@@ -88,6 +88,18 @@ describe("evaluateGameCalibration", () => {
     expect(state.progressPct).toBe(100);
   });
 
+  it("koşullar anında sağlansa bile minCalibrationMs dolmadan hazır olmaz", () => {
+    // Hızlı bir cihazda tüm koşullar birkaç yüz ms'de sağlanabiliyor; panel
+    // görünür olmadan kaybolmasın diye sabit bir alt süre sınırı var.
+    const early = evaluate(series(8), 200);
+    expect(early.ready).toBe(false);
+    expect(early.progressPct).toBeLessThan(100);
+
+    const onTime = evaluate(series(8), GAME_CALIBRATION.minCalibrationMs);
+    expect(onTime.ready).toBe(true);
+    expect(onTime.progressPct).toBe(100);
+  });
+
   it("guard kaldırılmamış olsa da hazır sayar", () => {
     // Lab kalibrasyonu RAISE_GUARD ister; oyun istemez.
     const relaxed = series(8).map((item) => ({

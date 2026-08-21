@@ -17,6 +17,8 @@ import {
 } from "@/lib/queries/performance";
 import { formatDateTR, getWeekStart } from "@/lib/date";
 import { BADGE_DEFINITIONS } from "@/domain/gamification/badges";
+import { getMemberWaivers } from "@/lib/queries/waivers";
+import { getMemberRankState } from "@/lib/queries/ranks";
 import {
   EmptyState,
   PanelCard,
@@ -42,15 +44,25 @@ export default async function MemberDashboardPage() {
 
   const membership = await requireOrganizationMembership(user.id);
 
-  const [history, scorecard, points, badgeKeys, logs, leaderboard] =
-    await Promise.all([
-      getCheckInHistory(member.id),
-      getMemberScorecard(member.id),
-      getPointsTotal(member.id),
-      getBadgeKeys(member.id),
-      getTrainingLogs(member.id),
-      getLeaderboard(membership.organizationId),
-    ]);
+  const [
+    history,
+    scorecard,
+    points,
+    badgeKeys,
+    logs,
+    leaderboard,
+    waivers,
+    rankState,
+  ] = await Promise.all([
+    getCheckInHistory(member.id),
+    getMemberScorecard(member.id),
+    getPointsTotal(member.id),
+    getBadgeKeys(member.id),
+    getTrainingLogs(member.id),
+    getLeaderboard(membership.organizationId),
+    getMemberWaivers(member.id, membership.organizationId),
+    getMemberRankState(member.id, membership.organizationId),
+  ]);
 
   const thisWeek = getWeekStart(new Date()).toISOString().slice(0, 10);
   const submittedThisWeek = history.some((h) => h.weekStart === thisWeek);
@@ -96,6 +108,65 @@ export default async function MemberDashboardPage() {
           highlight={!submittedThisWeek}
         />
       </div>
+
+      {waivers.pendingCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-sm border border-red-400/50 bg-red-400/10 p-5">
+          <div>
+            <p className="text-sm font-semibold text-brand-white">
+              {waivers.pendingCount} form onayını bekliyor.
+            </p>
+            <p className="mt-1 text-xs text-red-200">
+              Sağlık beyanı ve sorumluluk metni salonun yasal gerekliliği —
+              antrenman güvenliğin buna bağlı.
+            </p>
+          </div>
+          <Link
+            href="/uye/onaylar"
+            className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white"
+          >
+            Formları Aç
+          </Link>
+        </div>
+      )}
+
+      {rankState?.progress && rankState.nextRank && (
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-sm border border-brand-border bg-brand-surface p-5">
+          <div className="flex items-center gap-3">
+            <span
+              aria-hidden
+              className="inline-block h-8 w-8 rounded-sm border border-brand-border"
+              style={{
+                backgroundColor: rankState.currentRank?.color ?? "transparent",
+              }}
+            />
+            <div>
+              <p className="text-sm font-semibold text-brand-white">
+                {rankState.currentRank?.name ?? "Kuşaksız"} →{" "}
+                {rankState.nextRank.name}
+              </p>
+              <p className="mt-1 text-xs text-brand-muted">
+                {rankState.progress.ready
+                  ? "Koşulların tamam — antrenörünle konuş."
+                  : `Kalan: ${rankState.progress.missing.join(" · ")}`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="h-1.5 w-28 rounded-sm bg-brand-surface-2">
+              <span
+                className="block h-1.5 rounded-sm bg-brand-yellow"
+                style={{ width: `${rankState.progress.percent}%` }}
+              />
+            </span>
+            <Link
+              href="/uye/kusak"
+              className="rounded-sm border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+            >
+              Kuşağım
+            </Link>
+          </div>
+        </div>
+      )}
 
       {!submittedThisWeek && (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-sm border border-brand-yellow bg-brand-surface-2 p-5">

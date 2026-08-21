@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, requireOrganizationMembership } from "@/lib/auth/guards";
+import { staffScopeFor } from "@/lib/auth/scope";
 import { getStaffOverview } from "@/lib/queries/staff";
 import {
   SLOT_KIND_LABEL,
@@ -26,6 +27,8 @@ export default async function StaffOverviewPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/giris");
   const membership = await requireOrganizationMembership(user.id);
+  // Antrenör yalnız kendi sporcularını ve kendi açtığı seansları görür.
+  const scope = staffScopeFor(membership, user.id);
 
   const todayKey = toGymDateKey(new Date());
   const dayStart = new Date();
@@ -34,10 +37,10 @@ export default async function StaffOverviewPage() {
 
   const [overview, todaySlots, pendingBookings, pendingAttendance] =
     await Promise.all([
-      getStaffOverview(membership.organizationId),
-      listSlots(membership.organizationId, { from: dayStart, to: dayEnd }),
-      countPendingBookings(membership.organizationId),
-      countSlotsNeedingAttendance(membership.organizationId),
+      getStaffOverview(scope),
+      listSlots(scope, { from: dayStart, to: dayEnd }),
+      countPendingBookings(scope),
+      countSlotsNeedingAttendance(scope),
     ]);
 
   const today = todaySlots.filter(

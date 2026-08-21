@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, requireOrganizationMembership } from "@/lib/auth/guards";
+import { staffScopeFor } from "@/lib/auth/scope";
 import { listLeads } from "@/lib/queries/staff";
 import { formatDateTR } from "@/lib/date";
 import {
@@ -18,7 +19,8 @@ export default async function StaffLeadsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/giris");
   const membership = await requireOrganizationMembership(user.id);
-  const leads = await listLeads(membership.organizationId);
+  const scope = staffScopeFor(membership, user.id);
+  const leads = await listLeads(scope);
 
   return (
     <PanelPage

@@ -5,8 +5,9 @@ import { revalidatePath } from "next/cache";
 import {
   getCurrentUser,
   requireStaff,
-  requireStaffScopeForMember,
+  requireMemberInScope,
 } from "@/lib/auth/guards";
+import { staffScopeFor } from "@/lib/auth/scope";
 import { logTraining } from "@/lib/queries/performance";
 import { assignPlanToMember } from "@/lib/queries/plans";
 
@@ -43,7 +44,9 @@ export async function logTrainingForMemberAction(
     return { error: parsed.error.issues[0]?.message ?? "Form geçersiz." };
   }
 
-  await requireStaffScopeForMember(membership.organizationId, parsed.data.memberId);
+  await requireMemberInScope(
+    staffScopeFor(membership, user.id),
+    parsed.data.memberId);
   await logTraining(parsed.data.memberId, parsed.data, user.id);
 
   revalidatePath(`/personel/uyeler/${parsed.data.memberId}`);
@@ -74,7 +77,9 @@ export async function assignPlanAction(
   });
   if (!parsed.success) return { error: "Şablon seçilmedi." };
 
-  await requireStaffScopeForMember(membership.organizationId, parsed.data.memberId);
+  await requireMemberInScope(
+    staffScopeFor(membership, user.id),
+    parsed.data.memberId);
 
   const result = await assignPlanToMember(
     parsed.data.memberId,

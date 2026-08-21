@@ -30,8 +30,14 @@ import type {
 } from "../camera-fight-lab/types";
 
 export const GAME_CALIBRATION = {
-  /** Bu kadar geriye bakılır. */
-  windowMs: 900,
+  /**
+   * Bu kadar geriye bakılır. 900ms'ten 1500ms'e genişletildi: 900ms'lik
+   * pencerede düşük/dalgalı fps'te (ör. CPU delegate'e düşen cihazlar)
+   * `minSamples` eşiği tam sınırda kalıp kapı "sample sayısı" yüzünden
+   * kapanıp açılıyor, kullanıcıya kalibrasyon rastgele "çok sıkı" geliyordu.
+   * Daha geniş pencere aynı fps'te çok daha fazla örnek biriktirir.
+   */
+  windowMs: 1_500,
   /** Örnekleri "kullanılabilir" sayan görünürlük eşiği (lab: 0.65). */
   minVisibility: 0.4,
   /** Omuzların görünmesi gereken örnek oranı (lab: 0.85). */
@@ -45,8 +51,15 @@ export const GAME_CALIBRATION = {
   /** Omuz genişliği aralığı (lab: 0.14–0.5). */
   minShoulderWidth: 0.05,
   maxShoulderWidth: 0.8,
+  /**
+   * Kalibrasyon ekranı en az bu kadar açık kalır. Hızlı bir cihazda tüm
+   * koşullar birkaç yüz ms'de sağlanabiliyordu; panel görünür olmadan
+   * kayboluyor, kullanıcıya "kalibrasyon hiç yapılmadı" hissi veriyordu.
+   * Bu taban, cihaz hızından bağımsız sabit bir bekleme ekliyor.
+   */
+  minCalibrationMs: 1_000,
   /** Bu süreden sonra kullanıcı elle geçebilir. */
-  forceAfterMs: 6_000,
+  forceAfterMs: 5_000,
 } as const;
 
 export type GameCalibrationCheckId = "person" | "shoulders" | "head" | "distance";
@@ -194,10 +207,15 @@ export function evaluateGameCalibration(input: {
           observedDuration / GAME_CALIBRATION.minDurationMs,
         ),
       );
-  const progressPct = Math.round(((passedChecks / checks.length) * 0.7 + dataProgress * 0.3) * 100);
+  // Cihaz hızından bağımsız sabit bekleme payı — bkz. minCalibrationMs yorumu.
+  const timeProgress = Math.min(1, elapsedMs / GAME_CALIBRATION.minCalibrationMs);
+  const progressPct = Math.round(
+    ((passedChecks / checks.length) * 0.55 + dataProgress * 0.25 + timeProgress * 0.2) * 100,
+  );
 
   const snapshot = buildSnapshot({ usable, headSamples, camera, nowMs, shoulderWidth });
-  const ready = shouldersOk && headOk && distanceOk && enoughData && snapshot !== null;
+  const ready =
+    shouldersOk && headOk && distanceOk && enoughData && snapshot !== null && timeProgress >= 1;
 
   return { ready, progressPct, checks, snapshot, canForce: canForce && snapshot !== null };
 }

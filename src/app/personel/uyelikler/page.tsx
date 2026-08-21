@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, requireOrganizationMembership } from "@/lib/auth/guards";
+import { staffScopeFor } from "@/lib/auth/scope";
 import { getMembershipBreakdown, listMembers } from "@/lib/queries/staff";
 import {
   formatPriceTR,
@@ -9,6 +10,7 @@ import {
   listActiveMembershipPlans,
 } from "@/lib/queries/memberships";
 import { formatDateTR } from "@/lib/date";
+import { DUE_STATUS_LABEL } from "@/domain/finance/dues";
 import {
   EmptyState,
   PanelCard,
@@ -40,18 +42,19 @@ export default async function StaffMembershipsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/giris");
   const membership = await requireOrganizationMembership(user.id);
+  const scope = staffScopeFor(membership, user.id);
 
   const [overview, breakdown, members, plans] = await Promise.all([
-    getMembershipOverview(membership.organizationId),
-    getMembershipBreakdown(membership.organizationId),
-    listMembers(membership.organizationId),
+    getMembershipOverview(scope),
+    getMembershipBreakdown(scope),
+    listMembers(scope),
     listActiveMembershipPlans(membership.organizationId),
   ]);
 
   return (
     <PanelPage
       title="Üyelik & Ders Hakkı"
-      description="Paketler, aktif üyelikler, kalan ders hakları ve bitmek üzere olanlar. Tahsilat uygulamada tutulmuyor."
+      description="Paketler, aktif üyelikler, kalan ders hakları, bitmek üzere olanlar ve ödeme durumu."
     >
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -98,7 +101,7 @@ export default async function StaffMembershipsPage() {
 
       <PanelCard
         title="Üyelik Başlat / Yenile"
-        description="Paket seç, sporcuya bağla. Ders adedi ve süre paketten kopyalanır."
+        description="Paket seç, sporcuya bağla. Ders adedi ve süre paketten kopyalanır; anlaşılan tutar borç olarak açılır, peşin alınan para tahsilata yazılır."
       >
         <SubscriptionForm
           members={members.map((member) => ({
@@ -110,6 +113,7 @@ export default async function StaffMembershipsPage() {
             id: plan.id,
             name: plan.name,
             priceLabel: formatPriceTR(plan.priceMinor, plan.currency),
+            priceMinor: plan.priceMinor,
             durationDays: plan.durationDays,
             totalSessions: plan.totalSessions,
           }))}
@@ -119,8 +123,9 @@ export default async function StaffMembershipsPage() {
       <PanelCard title={`Paketler (${overview.plans.length})`}>
         {overview.plans.length === 0 ? (
           <EmptyState>
-            Paket tanımlı değil — örnek paketler için{" "}
-            <code>npm run db:seed</code> çalıştırabilirsin.
+            Paket tanımlı değil. Paketleri yönetici tanımlar (Yönetim →
+            Paketler); örnek paketler için <code>npm run db:seed</code>{" "}
+            çalıştırabilirsin.
           </EmptyState>
         ) : (
           <ul className="divide-y divide-brand-border">
@@ -166,6 +171,7 @@ export default async function StaffMembershipsPage() {
                 subscription.daysLeft <= 14;
               const outOfCredits =
                 isActive && subscription.sessionsRemaining === 0;
+              const owes = subscription.balanceMinor > 0;
 
               return (
                 <li
@@ -192,6 +198,22 @@ export default async function StaffMembershipsPage() {
                         ? "Sınırsız ders"
                         : `${subscription.sessionsUsed}/${subscription.sessionsTotal} ders kullanıldı · ${subscription.sessionsReserved} rezerve · ${subscription.sessionsRemaining} kaldı`}
                     </div>
+                    {subscription.priceMinor > 0 && (
+                      <div className="mt-1 text-xs text-brand-muted">
+                        {formatPriceTR(
+                          subscription.paidMinor,
+                          subscription.currency,
+                        )}{" "}
+                        /{" "}
+                        {formatPriceTR(
+                          subscription.priceMinor,
+                          subscription.currency,
+                        )}{" "}
+                        ödendi
+                        {subscription.balanceMinor > 0 &&
+                          ` · ${formatPriceTR(subscription.balanceMinor, subscription.currency)} borç`}
+                      </div>
+                    )}
 
                     <div className="mt-2 flex flex-wrap gap-2">
                       {isActive && (
@@ -242,6 +264,11 @@ export default async function StaffMembershipsPage() {
                       <Pill tone="danger">{subscription.daysLeft} gün kaldı</Pill>
                     )}
                     {outOfCredits && <Pill tone="danger">Ders bitti</Pill>}
+                    {owes && (
+                      <Pill tone="danger">
+                        {DUE_STATUS_LABEL[subscription.dueStatus]}
+                      </Pill>
+                    )}
                     <Pill tone={isActive ? "yellow" : "neutral"}>
                       {STATUS_LABEL[subscription.effectiveStatus] ??
                         subscription.effectiveStatus}
@@ -269,16 +296,14 @@ export default async function StaffMembershipsPage() {
 
       <Scaffold
         mirrors="Kong Academy → Koç / Yönetim → Satışlar"
-        summary="Paket, üyelik, yenileme, dondurma ve ders hakkı takibi panelden yönetiliyor. Tahsilat bilinçli olarak uygulamada değil — para salonun kendi yöntemiyle alınıyor, burada yalnız 'üyelik ne kadar var, kaç ders kaldı' tutuluyor."
+        summary="Paket, üyelik, yenileme, dondurma, ders hakkı ve ödeme takibi panelden yönetiliyor. Tahsilat Faz 12'de geri geldi: anlaşılan tutar üyeliğe yazılır, alınan para 'Kasam' (antrenör) ya da Kasa → Tahsilat (yönetici) ekranından girilir. Paket tanımları yöneticide, bitiş uyarıları otomatik."
         features={[
-          "Panelden paket tanımlama/düzenleme",
-          "Süresi bitene otomatik kapatma (zamanlanmış iş)",
-          "Üyelik bitmeden hatırlatma bildirimi",
+          "Yenileme geçmişi ve ortalama paket ömrü",
+          "Dondurma süresinin bitiş tarihine eklenmesi",
+          "Taksit planı (şu an parça parça tahsilat girilerek yapılıyor)",
         ]}
         needs={[
-          "Paket oluşturma formu (şu an paketler yalnız seed'den geliyor)",
-          "`closeExpiredSubscriptions` fonksiyonunu çağıran cron ya da Vercel Cron uç noktası",
-          "E-posta/SMS bildirim kanalı",
+          "Dondurma dönemini saklayan alan (şu an yalnız durum tutuluyor)",
         ]}
       />
     </PanelPage>

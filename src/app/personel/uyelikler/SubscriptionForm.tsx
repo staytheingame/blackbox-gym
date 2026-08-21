@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   startSubscriptionAction,
   type SubscriptionFormState,
@@ -23,6 +23,7 @@ export type SubscriptionPlanOption = {
   id: string;
   name: string;
   priceLabel: string;
+  priceMinor: number;
   durationDays: number;
   totalSessions: number | null;
 };
@@ -38,6 +39,10 @@ export function SubscriptionForm({
     startSubscriptionAction,
     initialState,
   );
+  // Anlaşılan tutar paketin etiket fiyatından gelir; indirim yapılırsa
+  // antrenör üzerine yazar. Borç = anlaşılan tutar − tahsilat.
+  const [planId, setPlanId] = useState("");
+  const selectedPlan = plans.find((plan) => plan.id === planId) ?? null;
 
   if (plans.length === 0) {
     return (
@@ -87,7 +92,8 @@ export function SubscriptionForm({
             id="sub-plan"
             name="planId"
             required
-            defaultValue=""
+            value={planId}
+            onChange={(event) => setPlanId(event.target.value)}
             className={inputClass}
           >
             <option value="" disabled>
@@ -104,6 +110,60 @@ export function SubscriptionForm({
         </div>
       </div>
 
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div>
+          <label htmlFor="sub-price" className={labelClass}>
+            Anlaşılan Tutar (₺)
+          </label>
+          <input
+            id="sub-price"
+            name="price"
+            inputMode="decimal"
+            key={planId || "paket-yok"}
+            defaultValue={
+              selectedPlan ? String(selectedPlan.priceMinor / 100) : ""
+            }
+            className={inputClass}
+          />
+          <p className="mt-1 text-[0.7rem] text-brand-muted">
+            İndirim yaptıysan düşür. Borç bu tutardan hesaplanır.
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="sub-paid" className={labelClass}>
+            Şimdi Alınan (₺)
+          </label>
+          <input
+            id="sub-paid"
+            name="paid"
+            inputMode="decimal"
+            placeholder="peşinat ya da tamamı"
+            className={inputClass}
+          />
+          <p className="mt-1 text-[0.7rem] text-brand-muted">
+            Boş bırakılırsa tahsilat yazılmaz, borç açık kalır.
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="sub-method" className={labelClass}>
+            Ödeme Şekli
+          </label>
+          <select
+            id="sub-method"
+            name="method"
+            defaultValue="nakit"
+            className={inputClass}
+          >
+            <option value="nakit">Nakit</option>
+            <option value="kart">Kredi/banka kartı</option>
+            <option value="havale">Havale/EFT</option>
+            <option value="diger">Diğer</option>
+          </select>
+        </div>
+      </div>
+
       <div>
         <label htmlFor="sub-note" className={labelClass}>
           Not (opsiyonel)
@@ -112,7 +172,7 @@ export function SubscriptionForm({
           id="sub-note"
           name="note"
           maxLength={200}
-          placeholder="Nakit / havale / taksit bilgisi"
+          placeholder="Taksit planı, özel not…"
           className={inputClass}
         />
       </div>

@@ -148,3 +148,51 @@ export function gymDateTimeToInstant(dateKey: string, time: string): Date {
   const guess = new Date(naive - zoneOffsetMs(new Date(naive)));
   return new Date(naive - zoneOffsetMs(guess));
 }
+
+/** Salon saatinde günün başlangıç anı — "bugünün tahsilatı" filtresi için. */
+export function getDayStartInstant(date: Date): Date {
+  return gymDateTimeToInstant(toGymDateKey(date), "00:00");
+}
+
+/** Salon saatinde ayın ilk gününün başlangıç anı. */
+export function getMonthStartInstant(date: Date): Date {
+  return gymDateTimeToInstant(`${toGymMonthKey(date)}-01`, "00:00");
+}
+
+/** "2026-08" — salon saatiyle ay anahtarı (maaş tahakkuku bunu kullanır). */
+export function toGymMonthKey(date: Date): string {
+  return toGymDateKey(date).slice(0, 7);
+}
+
+/** Takvim günü ekler ve sonucun gün başlangıcını verir (DST'de kaymaz). */
+export function addGymDays(date: Date, days: number): Date {
+  const [year, month, day] = toGymDateKey(date).split("-").map(Number);
+  const civil = new Date(Date.UTC(year, month - 1, day + days));
+  return gymDateTimeToInstant(civil.toISOString().slice(0, 10), "00:00");
+}
+
+/** Takvim ayı ekler; sonuç her zaman ayın 1'inin başlangıcıdır. */
+export function addGymMonths(date: Date, months: number): Date {
+  const [year, month] = toGymMonthKey(date).split("-").map(Number);
+  const civil = new Date(Date.UTC(year, month - 1 + months, 1));
+  return gymDateTimeToInstant(civil.toISOString().slice(0, 10), "00:00");
+}
+
+/** "Ağustos 2026" */
+export function formatMonthTR(date: Date): string {
+  return new Intl.DateTimeFormat("tr-TR", {
+    timeZone: GYM_TIME_ZONE,
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+/** "18.08.2026" — tabloda dar sütun için kısa gün. */
+export function formatShortDateTR(date: Date): string {
+  return new Intl.DateTimeFormat("tr-TR", {
+    timeZone: GYM_TIME_ZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}

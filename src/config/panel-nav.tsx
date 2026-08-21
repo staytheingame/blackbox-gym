@@ -1,19 +1,25 @@
 import type { IconProps } from "@/components/panel/icons";
 import {
+  BeltIcon,
   CalendarIcon,
   ChartIcon,
   ClipboardIcon,
+  ClockIcon,
   GloveIcon,
   GridIcon,
   InboxIcon,
+  AppleIcon,
+  BellIcon,
   MessageIcon,
   PlanIcon,
   ScaleIcon,
   SettingsIcon,
   ShieldIcon,
+  SignatureIcon,
   TrophyIcon,
   UserIcon,
   UsersIcon,
+  WalletIcon,
 } from "@/components/panel/icons";
 
 /**
@@ -32,18 +38,28 @@ import {
  * Menüden çıkarmak sayfayı silmez; rota çalışmaya devam eder.
  */
 
-export type PanelRole = "member" | "staff";
+/**
+ * Üç panel var, üç menü: sporcu (/uye), antrenör (/personel), yönetici
+ * (/yonetim). Yönetici antrenör panelini de görebilir — kabuğa hangi rolün
+ * menüsünü basacağı bulunduğu yola göre seçilir (bkz. ilgili `layout.tsx`).
+ */
+export type PanelRole = "member" | "staff" | "admin";
 
 /** Rozet anahtarları — sayıları `src/lib/queries/nav-badges.ts` hesaplar. */
 export type BadgeKey =
   | "pendingCheckIns" // personel: incelenmemiş check-in
   | "pendingBookings" // personel: onay bekleyen grup dersi isteği
   | "pendingAttendance" // personel: yoklaması alınmamış geçmiş seans
+  | "pendingInvites" // personel/yönetici: hesabını kurmamış davetli sporcu
+  | "pendingWaivers" // personel: onam/sağlık beyanı eksik sporcu
+  | "rankReady" // personel: terfiye hazır sporcu
   | "checkInDue" // üye: bu haftanın kontrolü gönderilmedi
+  | "waiverDue" // üye: imzalanmamış ya da eskimiş onam formu
+  | "unreadNotifications" // her üç rol: okunmamış bildirim
   | "unreadMessages"; // her iki rol
 
 /** Kapalı bayraklı bölüm menüde çıkmaz (bkz. `src/config/feature-flags.ts`). */
-export type FeatureFlag = "mesajlar" | "protokoller";
+export type FeatureFlag = "mesajlar" | "protokoller" | "kusaklar" | "onaylar";
 
 export type PanelNavItem = {
   id: string;
@@ -82,7 +98,7 @@ const STAFF_NAV: PanelNavItem[] = [
     href: "/personel/uyeler",
     icon: UsersIcon,
     roles: ["staff"],
-    mobileOrder: 2,
+    mobileOrder: 3,
     children: [
       {
         id: "sporcu-liste",
@@ -93,6 +109,15 @@ const STAFF_NAV: PanelNavItem[] = [
         title: "Sporcu Listesi",
       },
       {
+        id: "sporcu-davetler",
+        label: "Davetler",
+        href: "/personel/davetler",
+        icon: InboxIcon,
+        roles: ["staff"],
+        title: "Hesabını Kurmayı Bekleyenler",
+        badgeKey: "pendingInvites",
+      },
+      {
         id: "sporcu-adaylar",
         label: "Adaylar",
         href: "/personel/adaylar",
@@ -100,7 +125,27 @@ const STAFF_NAV: PanelNavItem[] = [
         roles: ["staff"],
         title: "Aday & Deneme Dersi Takibi",
       },
+      {
+        id: "sporcu-onaylar",
+        label: "Onaylar",
+        href: "/personel/onaylar",
+        icon: SignatureIcon,
+        roles: ["staff"],
+        title: "Onam & Sağlık Beyanı",
+        badgeKey: "pendingWaivers",
+        featureFlag: "onaylar",
+      },
     ],
+  },
+
+  {
+    id: "kasam",
+    label: "Kasam",
+    href: "/personel/kasa",
+    icon: WalletIcon,
+    roles: ["staff"],
+    shortLabel: "Kasa",
+    title: "Hakedişim & Sporcularımın Ödemeleri",
   },
 
   {
@@ -125,6 +170,24 @@ const STAFF_NAV: PanelNavItem[] = [
         icon: ChartIcon,
         roles: ["staff"],
         title: "Kondisyon Şablonları",
+      },
+      {
+        id: "plan-beslenme",
+        label: "Beslenme",
+        href: "/personel/beslenme",
+        icon: AppleIcon,
+        roles: ["staff"],
+        title: "Beslenme Planları",
+      },
+      {
+        id: "plan-kusaklar",
+        label: "Kuşaklar",
+        href: "/personel/kusaklar",
+        icon: BeltIcon,
+        roles: ["staff"],
+        title: "Kuşak & Müfredat",
+        badgeKey: "rankReady",
+        featureFlag: "kusaklar",
       },
       {
         id: "plan-teknikler",
@@ -153,20 +216,27 @@ const STAFF_NAV: PanelNavItem[] = [
     roles: ["staff"],
     featureFlag: "protokoller",
     title: "Hazır Maç Kampı Protokolleri",
-    mobileOrder: 5,
     shortLabel: "Kamp",
   },
 
   {
     id: "ders-programi",
     label: "Ders Programı",
-    href: "/personel/program",
+    href: "/personel/bugun",
     icon: CalendarIcon,
     roles: ["staff"],
-    mobileOrder: 4,
+    mobileOrder: 2,
     shortLabel: "Program",
     badgeKey: "pendingBookings",
     children: [
+      {
+        id: "program-bugun",
+        label: "Bugün",
+        href: "/personel/bugun",
+        icon: ClockIcon,
+        roles: ["staff"],
+        title: "Günün Akışı — Kim Geliyor",
+      },
       {
         id: "program-takvim",
         label: "Saatlerim",
@@ -203,7 +273,7 @@ const STAFF_NAV: PanelNavItem[] = [
     icon: ClipboardIcon,
     roles: ["staff"],
     badgeKey: "pendingCheckIns",
-    mobileOrder: 3,
+    mobileOrder: 4,
     shortLabel: "Takip",
     children: [
       {
@@ -277,6 +347,18 @@ const STAFF_NAV: PanelNavItem[] = [
   },
 
   {
+    id: "bildirimler",
+    label: "Bildirimler",
+    href: "/personel/bildirimler",
+    icon: BellIcon,
+    roles: ["staff"],
+    badgeKey: "unreadNotifications",
+    mobileOrder: 5,
+    shortLabel: "Bildirim",
+    title: "Bildirim Kutusu & Hatırlatmalar",
+  },
+
+  {
     id: "ayarlar",
     label: "Ayarlar",
     href: "/personel/ayarlar",
@@ -323,6 +405,14 @@ const MEMBER_NAV: PanelNavItem[] = [
         icon: ChartIcon,
         roles: ["member"],
         title: "Kondisyon Programım",
+      },
+      {
+        id: "program-beslenme",
+        label: "Beslenme",
+        href: "/uye/beslenme",
+        icon: AppleIcon,
+        roles: ["member"],
+        title: "Beslenme Planım",
       },
       {
         id: "program-tarti",
@@ -422,6 +512,15 @@ const MEMBER_NAV: PanelNavItem[] = [
         title: "Dövüş Analitiği & Refleks",
       },
       {
+        id: "kontrol-kusak",
+        label: "Kuşağım",
+        href: "/uye/kusak",
+        icon: BeltIcon,
+        roles: ["member"],
+        title: "Kuşak & Müfredat",
+        featureFlag: "kusaklar",
+      },
+      {
         id: "kontrol-lig",
         label: "Lig",
         href: "/uye/lig",
@@ -440,7 +539,6 @@ const MEMBER_NAV: PanelNavItem[] = [
     roles: ["member"],
     featureFlag: "mesajlar",
     badgeKey: "unreadMessages",
-    mobileOrder: 5,
     shortLabel: "Mesaj",
     children: [
       {
@@ -463,11 +561,27 @@ const MEMBER_NAV: PanelNavItem[] = [
   },
 
   {
+    id: "uye-bildirimler",
+    label: "Bildirimler",
+    href: "/uye/bildirimler",
+    icon: BellIcon,
+    roles: ["member"],
+    badgeKey: "unreadNotifications",
+    mobileOrder: 5,
+    shortLabel: "Bildirim",
+    title: "Ders Hatırlatmaları & Duyurular",
+  },
+
+  {
     id: "profil",
     label: "Profil",
     href: "/uye/profil",
     icon: UserIcon,
     roles: ["member"],
+    // Bölüm, alt sayfadaki onam rozetini yansıtır: yan menü yalnız
+    // bölümün kendi `badgeKey`'ini gösterir, imzasız form da sporcunun
+    // başka yerden fark edemeyeceği bir "senden bekleniyor" işidir.
+    badgeKey: "waiverDue",
     children: [
       {
         id: "profil-ayarlar",
@@ -475,6 +589,16 @@ const MEMBER_NAV: PanelNavItem[] = [
         href: "/uye/profil",
         icon: SettingsIcon,
         roles: ["member"],
+      },
+      {
+        id: "profil-onaylar",
+        label: "Onaylarım",
+        href: "/uye/onaylar",
+        icon: SignatureIcon,
+        roles: ["member"],
+        title: "Onam, Sağlık Beyanı & Verilerim",
+        badgeKey: "waiverDue",
+        featureFlag: "onaylar",
       },
       {
         id: "profil-notlar",
@@ -495,8 +619,159 @@ const MEMBER_NAV: PanelNavItem[] = [
   },
 ];
 
+
+/* ═══════════════════════════════════════════════════════════════
+   YÖNETİCİ — salonun işletme katmanı (/yonetim)
+   
+   Antrenör paneli "bugün kim geliyor, kim nasıl gidiyor" sorusuna bakar;
+   yönetici paneli "salon nasıl gidiyor" sorusuna. Bilinçli ayrım: paket
+   tanımı, antrenör kadrosu, doluluk ve bildirim kuyruğu antrenörün günlük
+   işine karışmasın diye burada durur.
+   ═══════════════════════════════════════════════════════════════ */
+const ADMIN_NAV: PanelNavItem[] = [
+  {
+    id: "yonetici-genel",
+    label: "Genel Bakış",
+    href: "/yonetim",
+    icon: GridIcon,
+    roles: ["admin"],
+    mobileOrder: 1,
+    shortLabel: "Panel",
+  },
+
+  {
+    id: "yonetici-kadro",
+    label: "Kadro",
+    href: "/yonetim/kadro",
+    icon: ShieldIcon,
+    roles: ["admin"],
+    mobileOrder: 2,
+    shortLabel: "Kadro",
+    title: "Antrenör & Yönetici Kadrosu",
+  },
+
+  {
+    id: "yonetici-sporcular",
+    label: "Sporcular",
+    href: "/yonetim/uyeler",
+    icon: UsersIcon,
+    roles: ["admin"],
+    mobileOrder: 3,
+    shortLabel: "Sporcu",
+    badgeKey: "pendingInvites",
+    title: "Tüm Sporcular & Davet Durumu",
+  },
+
+  {
+    id: "yonetici-paketler",
+    label: "Paketler",
+    href: "/yonetim/paketler",
+    icon: PlanIcon,
+    roles: ["admin"],
+    mobileOrder: 4,
+    shortLabel: "Paket",
+    title: "Üyelik Paketleri",
+  },
+
+  {
+    id: "yonetici-muhasebe",
+    label: "Kasa",
+    href: "/yonetim/muhasebe",
+    icon: WalletIcon,
+    roles: ["admin"],
+    mobileOrder: 5,
+    shortLabel: "Kasa",
+    title: "Gelir, Gider ve Kâr",
+    children: [
+      {
+        id: "muhasebe-ozet",
+        label: "Özet",
+        href: "/yonetim/muhasebe",
+        icon: WalletIcon,
+        roles: ["admin"],
+        title: "Kasa Özeti — Gelir, Gider, Kâr",
+      },
+      {
+        id: "muhasebe-tahsilat",
+        label: "Tahsilat",
+        href: "/yonetim/muhasebe/tahsilat",
+        icon: ClipboardIcon,
+        roles: ["admin"],
+        title: "Tahsilat & Borç Takibi",
+      },
+      {
+        id: "muhasebe-giderler",
+        label: "Giderler",
+        href: "/yonetim/muhasebe/giderler",
+        icon: ClipboardIcon,
+        roles: ["admin"],
+        title: "Salon Giderleri & Sabit Maliyet",
+      },
+      {
+        id: "muhasebe-hakedis",
+        label: "Hakediş",
+        href: "/yonetim/muhasebe/hakedis",
+        icon: ChartIcon,
+        roles: ["admin"],
+        title: "Antrenör Hakedişi & Ödeme",
+      },
+    ],
+  },
+
+  {
+    id: "yonetici-raporlar",
+    label: "Raporlar",
+    href: "/yonetim/raporlar",
+    icon: ChartIcon,
+    roles: ["admin"],
+    title: "Doluluk, Devamlılık ve Üyelik Raporu",
+  },
+
+  {
+    id: "yonetici-kayitlar",
+    label: "Kayıtlar",
+    href: "/yonetim/kayitlar",
+    icon: ClipboardIcon,
+    roles: ["admin"],
+    shortLabel: "Kayıt",
+    children: [
+      {
+        id: "yonetici-denetim",
+        label: "Denetim",
+        href: "/yonetim/kayitlar",
+        icon: ClipboardIcon,
+        roles: ["admin"],
+        title: "Denetim Kaydı — Kim Ne Yaptı",
+      },
+      {
+        id: "yonetici-kvkk",
+        label: "Veri & KVKK",
+        href: "/yonetim/kvkk",
+        icon: ShieldIcon,
+        roles: ["admin"],
+        title: "Dışa Aktarma, Veri Dökümü ve Silme Talebi",
+      },
+    ],
+  },
+
+  {
+    id: "yonetici-bildirimler",
+    label: "Bildirimler",
+    href: "/yonetim/bildirimler",
+    icon: BellIcon,
+    roles: ["admin"],
+    mobileOrder: 6,
+    shortLabel: "Bildirim",
+    title: "Hatırlatma Kuyruğu & Gönderim Dökümü",
+  },
+];
+
 /** Rol ayrımı olmayan tek kaynak — türetmeler aşağıdaki yardımcılarla. */
-export const NAVIGATION: PanelNavItem[] = [...STAFF_NAV, ...MEMBER_NAV];
+export const NAVIGATION: PanelNavItem[] = [
+  ...STAFF_NAV,
+  ...MEMBER_NAV,
+  ...ADMIN_NAV,
+];
 
 // ── Türetmeler ─────────────────────────────────────────────────
 
@@ -508,6 +783,11 @@ export const NAVIGATION: PanelNavItem[] = [...STAFF_NAV, ...MEMBER_NAV];
 export const DEFAULT_FEATURE_FLAGS: Record<FeatureFlag, boolean> = {
   mesajlar: true,
   protokoller: true,
+  // Kuşak merdiveni her salonda anlamlı değil (yalnız boks çalışan salon
+  // derece vermeyebilir); onam formları ise hukuki bir gerek olduğu için
+  // varsayılan açık. İkisi de bölüm bazında kapatılabilir.
+  kusaklar: true,
+  onaylar: true,
 };
 
 const DEFAULT_ENABLED_FLAGS: ReadonlySet<FeatureFlag> = new Set(
@@ -604,4 +884,12 @@ export function isNavigableRoot(
 export const PANEL_ROLE_LABEL: Record<PanelRole, string> = {
   member: "Sporcu Paneli",
   staff: "Antrenör Paneli",
+  admin: "Yönetici Paneli",
+};
+
+/** Panelin kök yolu — kabuğun logosu ve "geri" düğmesi buraya bakar. */
+export const PANEL_ROLE_HOME: Record<PanelRole, string> = {
+  member: "/uye",
+  staff: "/personel",
+  admin: "/yonetim",
 };

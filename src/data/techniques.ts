@@ -222,3 +222,8 @@ export function techniquesByCategory(
   if (category === "hepsi") return techniques;
   return techniques.filter((technique) => technique.category === category);
 }
+
+/** Plan/müfredat maddelerinden teknik kartına köprü. */
+export function techniqueBySlug(slug: string): Technique | undefined {
+  return techniques.find((technique) => technique.slug === slug);
+}

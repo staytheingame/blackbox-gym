@@ -25,6 +25,12 @@ export function enabledFeatureFlags(): ReadonlySet<FeatureFlag> {
   if (read(process.env.NEXT_PUBLIC_FEATURE_PROTOKOLLER, DEFAULTS.protokoller)) {
     enabled.add("protokoller");
   }
+  if (read(process.env.NEXT_PUBLIC_FEATURE_KUSAKLAR, DEFAULTS.kusaklar)) {
+    enabled.add("kusaklar");
+  }
+  if (read(process.env.NEXT_PUBLIC_FEATURE_ONAYLAR, DEFAULTS.onaylar)) {
+    enabled.add("onaylar");
+  }
 
   return enabled;
 }

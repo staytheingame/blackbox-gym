@@ -2,11 +2,19 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { getWeekStart } from "@/lib/date";
 import type { BadgeKey } from "@/config/panel-nav";
+import { organizationScope, type StaffScope } from "@/lib/auth/scope";
 import { countPendingCheckIns } from "@/lib/queries/staff";
 import {
   countPendingBookings,
   countSlotsNeedingAttendance,
 } from "@/lib/queries/slots";
+import { countUnread } from "@/lib/queries/notifications";
+import { countPendingInvites } from "@/lib/queries/invites";
+import {
+  countMembersWithPendingWaivers,
+  countPendingWaiversForMember,
+} from "@/lib/queries/waivers";
+import { countRankReady } from "@/lib/queries/ranks";
 
 export type NavBadges = Partial<Record<BadgeKey, number>>;
 
@@ -16,33 +24,73 @@ export type NavBadges = Partial<Record<BadgeKey, number>>;
  * değil: gürültü yaratıyordu.
  */
 export async function fetchStaffBadges(
-  organizationId: string,
+  scope: StaffScope,
+  userId: string,
 ): Promise<NavBadges> {
-  const [pendingCheckIns, pendingBookings, pendingAttendance] =
-    await Promise.all([
-      countPendingCheckIns(organizationId),
-      countPendingBookings(organizationId),
-      countSlotsNeedingAttendance(organizationId),
-    ]);
+  const [
+    pendingCheckIns,
+    pendingBookings,
+    pendingAttendance,
+    pendingInvites,
+    unreadNotifications,
+    pendingWaivers,
+    rankReady,
+  ] = await Promise.all([
+    countPendingCheckIns(scope),
+    countPendingBookings(scope),
+    countSlotsNeedingAttendance(scope),
+    countPendingInvites(scope),
+    countUnread(userId),
+    countMembersWithPendingWaivers(scope),
+    countRankReady(scope),
+  ]);
 
   return {
     pendingCheckIns,
     pendingBookings,
     pendingAttendance,
+    pendingInvites,
+    unreadNotifications,
+    pendingWaivers,
+    rankReady,
     // Mesajlaşma veri modeli henüz yok — bkz. BACKLOG.md.
     unreadMessages: 0,
   };
 }
 
-export async function fetchMemberBadges(memberId: string): Promise<NavBadges> {
+export async function fetchMemberBadges(
+  memberId: string,
+  userId: string,
+  organizationId: string,
+): Promise<NavBadges> {
   const weekStart = getWeekStart(new Date());
-  const submitted = await prisma.checkIn.findUnique({
-    where: { memberId_weekStart: { memberId, weekStart } },
-    select: { id: true },
-  });
+
+  const [submitted, unreadNotifications, waiverDue] = await Promise.all([
+    prisma.checkIn.findUnique({
+      where: { memberId_weekStart: { memberId, weekStart } },
+      select: { id: true },
+    }),
+    countUnread(userId),
+    countPendingWaiversForMember(memberId, organizationId),
+  ]);
 
   return {
     checkInDue: submitted ? 0 : 1,
+    unreadNotifications,
+    waiverDue,
     unreadMessages: 0,
   };
+}
+
+/** Yönetici panelinin rozetleri — salon geneli. */
+export async function fetchAdminBadges(
+  organizationId: string,
+  userId: string,
+): Promise<NavBadges> {
+  const [pendingInvites, unreadNotifications] = await Promise.all([
+    countPendingInvites(organizationScope(organizationId)),
+    countUnread(userId),
+  ]);
+
+  return { pendingInvites, unreadNotifications };
 }

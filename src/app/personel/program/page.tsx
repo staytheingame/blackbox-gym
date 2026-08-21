@@ -4,6 +4,7 @@ import {
   getCurrentUser,
   requireOrganizationMembership,
 } from "@/lib/auth/guards";
+import { staffScopeFor } from "@/lib/auth/scope";
 import {
   SLOT_KIND_LABEL,
   listSlots,
@@ -50,6 +51,7 @@ export default async function StaffProgramPage({
   const user = await getCurrentUser();
   if (!user) redirect("/giris");
   const membership = await requireOrganizationMembership(user.id);
+  const scope = staffScopeFor(membership, user.id);
 
   const { hafta } = await searchParams;
   const offset = parseWeekOffset(hafta);
@@ -58,7 +60,7 @@ export default async function StaffProgramPage({
   const from = new Date(thisWeekStart.getTime() + offset * 7 * MS_PER_DAY);
   const to = new Date(from.getTime() + 7 * MS_PER_DAY);
 
-  const slots = await listSlots(membership.organizationId, { from, to });
+  const slots = await listSlots(scope, { from, to });
 
   const open = slots.filter((slot) => slot.status === "acik");
   const freeSeats = open.reduce(
