@@ -132,14 +132,15 @@ Seed hesapları: `yonetici@blackbox.test`, `personel@blackbox.test`,
 ### Yönetici paneli
 - [ ] Antrenör hesabıyla `/yonetim` açılmıyor, `/personel`'e yönlendiriyor.
 - [ ] `/yonetim/paketler` → paket ekleme, güncelleme, satıştan kaldırma.
-- [ ] `/yonetim/kadro` → antrenör ekleme, rol değiştirme; **son yönetici**
+- [ ] `/yonetim/kadro` → antrenör daveti, rol değiştirme; **son yönetici**
       rolünü bırakamıyor ve hesabını kapatamıyor.
 - [ ] `/yonetim/raporlar` → 7/30/90 gün aralıkları, saat ve gün dağılımı.
 
 ## Faz 12 — koç kapsamı, tahsilat ve muhasebe
 
 Bu bölüm **iki antrenör hesabı** gerektirir (A ve B) — kapsam ayrımı tek
-hesapla kanıtlanamaz. `/yonetim/kadro` ekranından ikinci bir antrenör aç.
+hesapla kanıtlanamaz. `/yonetim/kadro` ekranından ikinci bir antrenör davet et ve davet
+bağlantısından şifresini kur.
 
 ### Görünürlük kapsamı (en kritik)
 - [ ] A antrenörü sporcu eklediğinde sporcu **kendiliğinden A'ya** atanıyor.
@@ -196,3 +197,42 @@ hesapla kanıtlanamaz. `/yonetim/kadro` ekranından ikinci bir antrenör aç.
 - [ ] `/yonetim/muhasebe/giderler` → sabit gider ekleniyor; "Bu Ayı İşle"
       ikinci kez basılınca mükerrer kayıt oluşmuyor.
 - [ ] Antrenör hesabıyla `/yonetim/muhasebe` açılmıyor.
+
+## Faz 13 — personel daveti ve antrenman şablonu düzenleyici
+
+### Kadroya davet (şifreyi personel kurar)
+- [ ] `/yonetim/kadro` → "Kadroya Davet Et" formunda **şifre alanı yok**.
+- [ ] Ad, e-posta ve rol yazılıp gönderilince davet bağlantısı ekranda çıkıyor;
+      "Kopyala" ve "WhatsApp'ta Aç" düğmeleri çalışıyor.
+- [ ] Davet, "Bekleyen Davetler" kartında rolüyle birlikte listeleniyor.
+- [ ] Bağlantı gizli sekmede açılınca rolüne uygun başlık çıkıyor
+      ("Antrenör Daveti" / "Yönetici Daveti").
+- [ ] Şifre 8 karakterden kısa girilirse reddediyor; iki şifre farklıysa
+      "Şifreler aynı değil" diyor.
+- [ ] Şifre kurulunca oturum **hemen** açılıyor ve rolün açılış ekranına
+      düşüyor (antrenör → `/personel`, yönetici → `/yonetim`).
+- [ ] Aynı bağlantı ikinci kez açılınca "Bağlantı kullanılmış" diyor.
+- [ ] Kurulan hesap "Bekleyen Davetler" listesinden düşüp kadroda çıkıyor.
+- [ ] "Yeni Bağlantı Üret" sonrası **eski bağlantı** artık çalışmıyor.
+- [ ] "Daveti İptal Et" sonrası bağlantı "Bağlantı geçersiz" veriyor.
+- [ ] Zaten hesabı olan bir e-postaya davet çıkarılamıyor (uyarı veriyor).
+- [ ] Sporcu davet bağlantısı (`/personel/uyeler` → ekle) hâlâ çalışıyor —
+      aynı adres iki davet türünü de karşılıyor.
+
+### Antrenman şablonu düzenleyici
+- [ ] `/personel/planlar` → "Yeni Şablon" formu şablonu oluşturup düzenleyici
+      sayfasına yönlendiriyor.
+- [ ] Aynı adla ikinci şablon oluşturulamıyor.
+- [ ] Şablon sayfasında hafta düğmeleri arasında geçiş yapılıyor; her düğme
+      o haftadaki gün sayısını gösteriyor.
+- [ ] Güne hareket eklenince round/süre/dinlenme/RPE satırı doğru okunuyor
+      (süre **dakika** yazılıyor, listede "3 dk" çıkıyor).
+- [ ] Hareket "↑/↓" ile taşınıyor; silinince sıra numaraları boşluk bırakmıyor.
+- [ ] Aynı haftada aynı gün ikinci kez eklenemiyor (gün listesinde çıkmıyor).
+- [ ] "Haftayı Kopyala" → hedef haftadaki günler kaynağın kopyasıyla değişiyor.
+- [ ] Hafta sayısı düşürülünce fazla haftaların günleri siliniyor.
+- [ ] Şablon bir sporcuya atandıktan sonra "Şablonu Sil" **kapalı**; gerekçe
+      yazıyor ve "Yayından Kaldır" çalışıyor.
+- [ ] Yayından kaldırılan şablon listede "Yayında değil" rozetiyle çıkıyor.
+- [ ] Başka salonun şablon adresi elle yazılınca **404** veriyor.
+- [ ] Sporcuya atanan şablon `/uye/antrenman` ekranında doğru haftayla çıkıyor.

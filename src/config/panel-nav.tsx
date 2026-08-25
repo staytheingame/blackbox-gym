@@ -286,12 +286,20 @@ const STAFF_NAV: PanelNavItem[] = [
         badgeKey: "pendingCheckIns",
       },
       {
-        id: "takip-icgoruler",
-        label: "İçgörüler",
+        id: "takip-radar",
+        label: "Radar",
         href: "/personel/icgoruler",
         icon: ChartIcon,
         roles: ["staff"],
-        title: "Sporcu İçgörüleri",
+        title: "Takip Radarı — Bugün Kimden Başlanacak",
+      },
+      {
+        id: "takip-karne",
+        label: "Karnem",
+        href: "/personel/karne",
+        icon: TrophyIcon,
+        roles: ["staff"],
+        title: "Karnem — Derslerim ve Bekleyen İşlerim",
       },
       {
         id: "takip-mesajlar",
@@ -648,6 +656,16 @@ const ADMIN_NAV: PanelNavItem[] = [
     mobileOrder: 2,
     shortLabel: "Kadro",
     title: "Antrenör & Yönetici Kadrosu",
+  },
+
+  {
+    id: "yonetici-kocluk",
+    label: "Koçluk",
+    href: "/yonetim/kocluk",
+    icon: ChartIcon,
+    roles: ["admin"],
+    shortLabel: "Koçluk",
+    title: "Antrenör Karneleri & Bekleyen İşler",
   },
 
   {

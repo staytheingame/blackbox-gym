@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser, requireAdmin } from "@/lib/auth/guards";
 import { listStaff } from "@/lib/queries/admin";
+import { listPendingStaffInvites } from "@/lib/queries/staff-invites";
 import { listCoachCompensations } from "@/lib/queries/finance";
 import { describeCompensation } from "@/domain/finance/earnings";
 import { ORG_ROLE_LABEL } from "@/lib/auth/roles";
-import { formatDateTR } from "@/lib/date";
+import { formatDateTR, formatDateTimeTR } from "@/lib/date";
 import {
   EmptyState,
   PanelCard,
@@ -14,6 +15,7 @@ import {
   StatCard,
 } from "@/components/panel/ui";
 import { AddStaffForm } from "./AddStaffForm";
+import { PendingInviteRow } from "./PendingInviteRow";
 import { CompensationForm } from "./CompensationForm";
 import { changeRoleAction, setStatusAction } from "./actions";
 
@@ -35,9 +37,10 @@ export default async function AdminStaffPage() {
   if (!user) redirect("/giris");
   const membership = await requireAdmin(user.id);
 
-  const [staff, compensations] = await Promise.all([
+  const [staff, compensations, pendingInvites] = await Promise.all([
     listStaff(membership.organizationId),
     listCoachCompensations(membership.organizationId),
+    listPendingStaffInvites(membership.organizationId),
   ]);
   const compensationByUser = new Map(
     compensations.map((row) => [row.coachUserId, row]),
@@ -49,11 +52,17 @@ export default async function AdminStaffPage() {
   return (
     <PanelPage
       title="Kadro"
-      description="Antrenör ve yönetici hesapları. Antrenör kendi ders saatlerini açar ve YALNIZ kendi sporcularını görür; yönetici ayrıca paket, kasa, rapor ve kadroya erişir. Her satırdaki 'Hakediş' bölümü o antrenörün nasıl kazandığını belirler."
+      description="Antrenör ve yönetici hesapları. Kadroya davet bağlantısıyla katılınır — şifresini herkes kendi belirler. Antrenör kendi ders saatlerini açar ve YALNIZ kendi sporcularını görür; yönetici ayrıca paket, kasa, rapor ve kadroya erişir. Her satırdaki 'Hakediş' bölümü o antrenörün nasıl kazandığını belirler."
     >
-      <div className="grid gap-5 sm:grid-cols-3">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Yönetici" value={admins.length} />
         <StatCard label="Antrenör" value={coaches.length} />
+        <StatCard
+          label="Bekleyen Davet"
+          value={pendingInvites.length}
+          hint="Şifresini kurmadı"
+          highlight={pendingInvites.length > 0}
+        />
         <StatCard
           label="Kapalı Hesap"
           value={disabled.length}
@@ -183,10 +192,53 @@ export default async function AdminStaffPage() {
       </PanelCard>
 
       <PanelCard
-        title="Kadroya Ekle"
-        description="Personel hesabı salonda yüz yüze kurulur; geçici şifreyi sen belirlersin. Sporcular ise davet bağlantısıyla kendi şifrelerini kurar."
+        title="Kadroya Davet Et"
+        description="Ad, e-posta ve rolü yaz; çıkan bağlantıyı ilet. Şifresini kendisi belirler — geçici şifre kimsenin telefonunda dolaşmaz."
       >
         <AddStaffForm />
+      </PanelCard>
+
+      <PanelCard
+        title={`Bekleyen Davetler (${pendingInvites.length})`}
+        description="Davet edildi ama henüz şifresini kurmadı. Bağlantı 72 saat geçerli; süresi dolduysa yenisini üret."
+      >
+        {pendingInvites.length === 0 ? (
+          <EmptyState>Bekleyen davet yok.</EmptyState>
+        ) : (
+          <ul className="divide-y divide-brand-border">
+            {pendingInvites.map((invite) => (
+              <li key={invite.id} className="py-4 first:pt-0 last:pb-0">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-brand-white">
+                      {invite.fullName}
+                    </div>
+                    <div className="mt-1 text-xs text-brand-muted">
+                      {invite.email} · davet {formatDateTR(invite.createdAt)}
+                    </div>
+                    <div className="mt-1 text-xs text-brand-muted">
+                      {invite.expired
+                        ? "Bağlantının süresi doldu"
+                        : `Son geçerlilik: ${formatDateTimeTR(invite.expiresAt)}`}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {invite.expired && <Pill tone="danger">Süresi doldu</Pill>}
+                    <Pill tone={invite.role === "admin" ? "yellow" : "neutral"}>
+                      {ORG_ROLE_LABEL[invite.role]}
+                    </Pill>
+                  </div>
+                </div>
+
+                <PendingInviteRow
+                  inviteId={invite.id}
+                  fullName={invite.fullName}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
       </PanelCard>
     </PanelPage>
   );

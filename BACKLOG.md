@@ -105,7 +105,7 @@ port edildi; içerik fight eksenine çevrildi.
 | --- | --- | --- |
 | Genel Bakış | `/personel` | çalışıyor |
 | Danışanlar → Liste / Aranacaklar | `/personel/uyeler`, `/personel/adaylar` | liste çalışıyor, aday takibi kısmi |
-| Planlar (library) | `/personel/planlar?tur=antrenman\|kondisyon`, `/personel/tarti` | şablon listesi + atama + tartı çalışıyor; şablon düzenleme yok |
+| Planlar (library) | `/personel/planlar?tur=antrenman\|kondisyon`, `/personel/planlar/<id>`, `/personel/tarti` | şablon oluşturma/düzenleme + atama + tartı çalışıyor |
 | Egzersiz Kütüphanesi | `/personel/teknikler` | çalışıyor (statik teknik havuzu) |
 | Protokoller | `/personel/protokoller` | iskelet |
 | Akademi | — | **kaldırıldı** (Faz 8); yerine `/personel/program` ders programı |
@@ -475,9 +475,11 @@ uygulanmadı**, kullanıcı onayı bekliyor.
 
 ### Planlar/tartı modüllerinin kalan parçaları
 
-- **Şablon düzenleme arayüzü yok:** antrenman/kondisyon şablonları ve üyelik
-  paketleri şu an yalnız seed ile oluşuyor; panelden ekleme-düzenleme ekranı
-  gerekiyor.
+- ~~**Şablon düzenleme arayüzü yok**~~ — antrenman/kondisyon şablonları
+  artık panelden kuruluyor: `/personel/planlar` künye formu,
+  `/personel/planlar/<id>` hafta/gün/hareket düzenleyicisi, hafta kopyalama
+  ve yayından kaldırma (Faz 13). Üyelik paketleri zaten
+  `/yonetim/paketler`ten yönetiliyordu.
 - **Süresi biten üyeliği kapatan zamanlanmış iş yok:**
   `closeExpiredSubscriptions(organizationId)` hazır, çağıracak bir cron
   (ör. Vercel Cron → korumalı route handler) kurulmalı.
@@ -518,9 +520,11 @@ PWA/serwist (ayrı karar).
   (`src/lib/auth/guards.ts`). Satır bazlı güvenlik politikaları eklenmeli —
   engel: BlackBox Supabase Auth kullanmıyor, kendi imzalı cookie'si var
   (bkz. `SUPABASE-GECIS.md`).
-- **Davet e-postası akışı yok:** personel üyeyi doğrudan geçici şifreyle
-  oluşturuyor; üye ilk girişte şifre değiştiremiyor (zorunlu şifre
-  değiştirme akışı eklenmeli).
+- **Davet e-postası akışı yok (bağlantı elle iletiliyor):** hem sporcu hem
+  personel hesabı artık davet bağlantısıyla açılıyor ve şifreyi kişi kendisi
+  kuruyor — geçici şifre kalmadı. Eksik olan yalnız **otomatik e-posta**:
+  bağlantıyı panel gösteriyor, ekleyen kişi WhatsApp/e-posta ile elle
+  gönderiyor. Ayrıca kurulmuş bir hesap için "şifremi unuttum" akışı yok.
 - **Tam 5 rollü personel hiyerarşisi yok:** şu an yalnızca `member`/`staff`;
   reception/trainer/manager/owner ayrımı `gym-membership-blueprint`'te
   tanımlı, henüz uygulanmadı.

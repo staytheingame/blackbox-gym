@@ -5,8 +5,10 @@ import { getCurrentUser, requireAdmin } from "@/lib/auth/guards";
 import { organizationScope } from "@/lib/auth/scope";
 import { getAdminOverview } from "@/lib/queries/admin";
 import { getOccupancyReport } from "@/lib/queries/analysis";
-import { getMemberInsights } from "@/lib/queries/staff";
-import { PanelCard, PanelPage, Pill, StatCard } from "@/components/panel/ui";
+import { getMemberRadarBoard } from "@/lib/queries/radar";
+import { RADAR_BAND_LABEL } from "@/domain/analysis/member-radar";
+import { RadarList } from "@/components/panel/RadarList";
+import { PanelCard, PanelPage, StatCard } from "@/components/panel/ui";
 import { EmptyState } from "@/components/panel/ui";
 
 export const metadata: Metadata = { title: "Yönetim — BlackBox" };
@@ -23,13 +25,14 @@ export default async function AdminOverviewPage() {
   // Yönetici salonun tamamını görür.
   const scope = organizationScope(membership.organizationId);
 
-  const [overview, occupancy, insights] = await Promise.all([
+  const [overview, occupancy, radar] = await Promise.all([
     getAdminOverview(membership.organizationId),
     getOccupancyReport(membership.organizationId, 30),
-    getMemberInsights(scope),
+    getMemberRadarBoard(scope),
   ]);
 
-  const atRisk = insights.filter((row) => row.flags.length >= 2);
+  // Genel bakışta yalnız kritik bant görünür; tam liste Takip Radarı'nda.
+  const atRisk = radar.rows.filter((row) => row.radar.band === "kritik");
 
   return (
     <PanelPage
@@ -90,44 +93,26 @@ export default async function AdminOverviewPage() {
       </div>
 
       <PanelCard
-        title={`Riskli Sporcular (${atRisk.length})`}
-        description="İki ya da daha fazla uyarı taşıyanlar. Detaylı analiz için sporcu kartına gir."
+        title={`${RADAR_BAND_LABEL.kritik} (${atRisk.length})`}
+        description="Takip radarının kritik bandı. Puan sporcunun notu değil — bugün kimden başlanacağını söyler."
         action={
           <Link href="/personel/icgoruler" className={linkClass}>
-            Tüm İçgörüler
+            Takip Radarı
           </Link>
         }
       >
-        {atRisk.length === 0 ? (
-          <EmptyState>
-            Çoklu uyarı taşıyan sporcu yok. Devamlılık iyi görünüyor.
-          </EmptyState>
-        ) : (
-          <ul className="divide-y divide-brand-border">
-            {atRisk.slice(0, 8).map((row) => (
-              <li
-                key={row.id}
-                className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
-              >
-                <Link
-                  href={`/personel/uyeler/${row.id}/analiz`}
-                  className="text-sm font-semibold text-brand-white transition-colors hover:text-brand-yellow"
-                >
-                  {row.fullName}
-                  <span className="ml-2 text-xs text-brand-muted">
-                    {row.memberNo}
-                  </span>
-                </Link>
-                <div className="flex flex-wrap gap-2">
-                  {row.flags.map((flag) => (
-                    <Pill key={flag} tone="danger">
-                      {FLAG_LABEL[flag] ?? flag}
-                    </Pill>
-                  ))}
-                </div>
-              </li>
-            ))}
-          </ul>
+        <RadarList
+          rows={atRisk.slice(0, 8)}
+          showCoach
+          empty="Kritik banda düşen sporcu yok. Devamlılık iyi görünüyor."
+        />
+        {atRisk.length > 8 && (
+          <Link
+            href="/personel/icgoruler?bant=kritik"
+            className="mt-4 inline-block text-xs font-bold uppercase tracking-wide text-brand-yellow hover:text-brand-white"
+          >
+            +{atRisk.length - 8} sporcu daha →
+          </Link>
         )}
       </PanelCard>
 
@@ -171,6 +156,9 @@ export default async function AdminOverviewPage() {
             <Link href="/yonetim/kadro" className={linkClass}>
               Kadro
             </Link>
+            <Link href="/yonetim/kocluk" className={linkClass}>
+              Koçluk ({overview.coachCount} antrenör)
+            </Link>
             <Link href="/yonetim/uyeler" className={linkClass}>
               Sporcular
             </Link>
@@ -193,9 +181,3 @@ export default async function AdminOverviewPage() {
   );
 }
 
-const FLAG_LABEL: Record<string, string> = {
-  "check-in-yok": "Kontrol yok",
-  "antrenman-yok": "Antrenman yok",
-  agri: "Ağrı",
-  "skor-dusuk": "Skor düşük",
-};

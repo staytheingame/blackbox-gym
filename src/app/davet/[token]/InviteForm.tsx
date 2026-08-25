@@ -12,10 +12,13 @@ const labelClass =
 
 export function InviteForm({
   token,
+  kind,
   fullName,
   email,
 }: {
   token: string;
+  /** Hangi tabloya bakılacağını sunucu tarafı bilir; form yalnız taşır. */
+  kind: "sporcu" | "personel";
   fullName: string;
   email: string;
 }) {
@@ -27,13 +30,14 @@ export function InviteForm({
   return (
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="token" value={token} />
+      <input type="hidden" name="kind" value={kind} />
 
       <div>
         <label htmlFor="email" className={labelClass}>
           E-posta
         </label>
         {/* Davetin bağlı olduğu adres değiştirilemez — hesabın kime ait
-            olduğunu antrenör belirledi. */}
+            olduğunu daveti çıkaran belirledi. */}
         <input
           id="email"
           value={email}

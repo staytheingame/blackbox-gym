@@ -47,7 +47,8 @@ export type CoachCompensationRow = Compensation & {
   currency: string;
 };
 
-function toCompensation(row: {
+/** Ham `CoachCompensation` satırını domain tipine çevirir; kayıt yoksa "yok". */
+export function toCompensation(row: {
   model: string;
   perSessionMinor: number | null;
   revenueShareBps: number | null;

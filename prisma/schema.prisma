@@ -61,6 +61,7 @@ model Organization {
   ranks             Rank[]
   waiverTemplates   WaiverTemplate[]
   auditLogs         AuditLog[]
+  staffInvites      StaffInvite[]
 
   payments           Payment[]
   expenses           Expense[]
@@ -494,6 +495,35 @@ model MemberInvite {
   createdAt       DateTime  @default(now())
 
   @@index([memberId, status])
+  @@index([expiresAt])
+}
+
+// Personel daveti — antrenör/yönetici de kendi şifresini kurar.
+//
+// Sporcu davetinden farkı: ortada henüz bir kayıt YOK (sporcuda `Member`
+// önce açılır). Davet edilenin adı, e-postası ve rolü bu satırda bekler;
+// bağlantı kullanılınca `User` + `OrganizationUser` birlikte doğar.
+//
+// status: bekliyor | kullanildi | iptal
+// role:   coach | admin
+model StaffInvite {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email           String
+  fullName        String
+  role            String
+  tokenHash       String       @unique
+  status          String       @default("bekliyor")
+  expiresAt       DateTime
+  usedAt          DateTime?
+  /// Daveti üreten yönetici — hesap sonradan silinse de kayıt kalsın diye
+  /// ilişki değil, düz kimlik.
+  createdByUserId String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([organizationId, status])
   @@index([expiresAt])
 }
 

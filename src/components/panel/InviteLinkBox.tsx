@@ -16,15 +16,19 @@ import { useState } from "react";
 export function InviteLinkBox({
   url,
   memberName,
+  kind = "sporcu",
   compact = false,
 }: {
   url: string;
   memberName: string;
+  /** Hazır mesajın ve açıklamanın dili buna göre değişir. */
+  kind?: "sporcu" | "personel";
   compact?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
 
-  const message = `Merhaba ${memberName.split(" ")[0]}, BlackBox sporcu panelin hazır. Şu bağlantıdan kendi şifreni belirle: ${url} (bağlantı 72 saat geçerli)`;
+  const panelLabel = kind === "personel" ? "antrenör panelin" : "sporcu panelin";
+  const message = `Merhaba ${memberName.split(" ")[0]}, BlackBox ${panelLabel} hazır. Şu bağlantıdan kendi şifreni belirle: ${url} (bağlantı 72 saat geçerli)`;
 
   async function copy(text: string) {
     try {
@@ -49,8 +53,9 @@ export function InviteLinkBox({
           </h3>
           <p className="mt-1 text-xs leading-relaxed text-brand-white">
             {memberName} bu bağlantıdan kendi şifresini belirleyecek. Bağlantı
-            72 saat geçerli ve tek kullanımlık — kaybolursa Davetler sayfasından
-            yenisini üretebilirsin.
+            72 saat geçerli ve tek kullanımlık — kaybolursa{" "}
+            {kind === "personel" ? "aşağıdaki bekleyen davetler" : "Davetler"}{" "}
+            listesinden yenisini üretebilirsin.
           </p>
         </>
       )}

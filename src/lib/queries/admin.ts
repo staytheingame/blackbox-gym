@@ -1,6 +1,5 @@
 import "server-only";
 import { prisma } from "@/lib/db";
-import { hashPassword } from "@/lib/auth/password";
 import { normalizeRole, type OrgRole } from "@/lib/auth/roles";
 import { getWeekStartInstant } from "@/lib/date";
 
@@ -10,6 +9,9 @@ import { getWeekStartInstant } from "@/lib/date";
  * Antrenör sorguları (`staff.ts`) "bu sporcu nasıl gidiyor" sorusuna bakar;
  * buradakiler "salon nasıl gidiyor" sorusuna: kadro, paket tanımları,
  * bildirim akışı, doluluk.
+ *
+ * Kadroya ekleme burada DEĞİL: personel hesabı davet bağlantısıyla açılır,
+ * şifresini kişi kendi kurar (bkz. `staff-invites.ts`).
  */
 
 export type StaffRow = {
@@ -64,60 +66,6 @@ export async function listStaff(organizationId: string): Promise<StaffRow[]> {
     createdAt: row.createdAt,
     upcomingSlots: byCoach.get(row.user.id) ?? 0,
   }));
-}
-
-export type CreateStaffResult =
-  | { ok: true; userId: string }
-  | { ok: false; error: string };
-
-/**
- * Antrenör/yönetici hesabı açar.
- *
- * Sporcudan farklı olarak burada geçici şifre YAZILIR: personel hesabı
- * salonda yüz yüze kurulur, davet bağlantısı bekletmenin anlamı yok.
- * Personel ilk girişinde şifresini değiştirmelidir.
- */
-export async function createStaffAccount(
-  organizationId: string,
-  input: {
-    fullName: string;
-    email: string;
-    password: string;
-    role: Exclude<OrgRole, "member">;
-  },
-): Promise<CreateStaffResult> {
-  const email = input.email.toLowerCase().trim();
-
-  const existing = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true },
-  });
-  if (existing) return { ok: false, error: "Bu e-posta zaten kayıtlı." };
-
-  const passwordHash = await hashPassword(input.password);
-
-  const userId = await prisma.$transaction(async (tx) => {
-    const user = await tx.user.create({
-      data: {
-        email,
-        passwordHash,
-        profile: { create: { displayName: input.fullName.trim() } },
-      },
-    });
-
-    await tx.organizationUser.create({
-      data: {
-        organizationId,
-        userId: user.id,
-        role: input.role,
-        status: "active",
-      },
-    });
-
-    return user.id;
-  });
-
-  return { ok: true, userId };
 }
 
 export type ChangeRoleResult = { ok: boolean; error?: string };
