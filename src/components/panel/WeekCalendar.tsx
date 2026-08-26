@@ -60,17 +60,25 @@ const DAY_LABEL = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 const DEFAULT_FIRST_HOUR = 8;
 const DEFAULT_LAST_HOUR = 22;
 
+/** Salon saatiyle seansın başladığı saat bandı (0–23). */
+function startHour(entry: CalendarEntry): number {
+  return Number(formatTimeTR(entry.startsAt).slice(0, 2));
+}
+
 function hourWindow(entries: CalendarEntry[]): number[] {
   let first = DEFAULT_FIRST_HOUR;
   let last = DEFAULT_LAST_HOUR;
 
   for (const entry of entries) {
-    const hour = Number(formatTimeTR(entry.startsAt).slice(0, 2));
-    // Seans biterken de görünsün: 21:30 + 90dk son bandı 23:00'e taşır.
-    const endHour =
-      hour + Math.ceil(entry.durationMinutes / 60) - (entry.durationMinutes % 60 === 0 ? 1 : 0);
+    const [hour, minute] = formatTimeTR(entry.startsAt).split(":").map(Number);
+    // Seans biterken de görünsün: 21:30 + 90dk 23:00 bandına taşar.
+    // `-1`: tam saatte biten seans bir sonraki bandı açmasın (20:00 + 60dk
+    // 20:00 bandında biter, 21:00'i gereksiz yere açmaz).
+    const endHour = Math.floor((hour * 60 + minute + entry.durationMinutes - 1) / 60);
     if (hour < first) first = hour;
-    if (endHour > last) last = endHour;
+    // Gece yarısını aşan seans varsa pencere 23'te durur; taşan kısım o gün
+    // gösterilmez — ertesi güne sarkan seans salonda yok.
+    if (endHour > last) last = Math.min(endHour, 23);
   }
 
   return Array.from({ length: Math.max(last - first + 1, 1) }, (_, i) => first + i);
@@ -104,7 +112,7 @@ export function WeekCalendar({
   // (gün, saat) → o bantta başlayan seanslar
   const cells = new Map<string, CalendarEntry[]>();
   for (const entry of entries) {
-    const key = `${toGymDateKey(entry.startsAt)}|${formatTimeTR(entry.startsAt).slice(0, 2)}`;
+    const key = `${toGymDateKey(entry.startsAt)}|${String(startHour(entry)).padStart(2, "0")}`;
     cells.set(key, [...(cells.get(key) ?? []), entry]);
   }
 
