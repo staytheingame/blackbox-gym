@@ -7,6 +7,7 @@ import { listPendingInvites } from "@/lib/queries/invites";
 import { formatDateTimeTR } from "@/lib/date";
 import { EmptyState, PanelCard, PanelPage, Pill, StatCard } from "@/components/panel/ui";
 import { ReissueButton } from "./ReissueButton";
+import { rowNameLinkClass } from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Davetler — BlackBox Panel" };
 
@@ -27,7 +28,7 @@ export default async function StaffInvitesPage() {
       action={
         <Link
           href="/personel/uyeler"
-          className="rounded-sm border border-brand-border px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+          className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow sm:min-h-9"
         >
           Sporcu Ekle
         </Link>
@@ -74,7 +75,7 @@ export default async function StaffInvitesPage() {
                   <div>
                     <Link
                       href={`/personel/uyeler/${row.memberId}`}
-                      className="text-sm font-semibold text-brand-white transition-colors hover:text-brand-yellow"
+                      className={rowNameLinkClass}
                     >
                       {row.fullName}
                       <span className="ml-2 text-xs text-brand-muted">

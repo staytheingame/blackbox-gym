@@ -25,7 +25,7 @@ export default function MemberRingFormPage() {
             action={
               <Link
                 href={tool.href}
-                className="rounded-sm bg-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white"
+                className="inline-flex min-h-11 items-center justify-center rounded-sm bg-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white sm:min-h-8"
               >
                 Aç
               </Link>

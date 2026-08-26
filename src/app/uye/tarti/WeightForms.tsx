@@ -8,13 +8,11 @@ import {
   type WeightEntryState,
   type WeightGoalState,
 } from "./actions";
-
-const inputClass =
-  "mt-1 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow";
-const labelClass =
-  "text-xs font-bold uppercase tracking-wide text-brand-muted";
-const buttonClass =
-  "rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white disabled:opacity-60";
+import {
+  inputClass,
+  labelClass,
+  primaryButtonClass,
+} from "@/components/panel/form";
 
 const entryInitial: WeightEntryState = {};
 const goalInitial: WeightGoalState = {};
@@ -81,7 +79,7 @@ export function WeightEntryForm() {
         </p>
       )}
 
-      <button type="submit" disabled={pending} className={buttonClass}>
+      <button type="submit" disabled={pending} className={primaryButtonClass}>
         {pending ? "Kaydediliyor…" : "Tartıyı Kaydet"}
       </button>
     </form>
@@ -166,7 +164,7 @@ export function WeightGoalForm({
         </p>
       )}
 
-      <button type="submit" disabled={pending} className={buttonClass}>
+      <button type="submit" disabled={pending} className={primaryButtonClass}>
         {pending ? "Kaydediliyor…" : "Hedefi Kaydet"}
       </button>
     </form>

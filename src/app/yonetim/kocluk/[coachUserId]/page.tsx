@@ -17,13 +17,11 @@ import {
 } from "@/components/panel/CoachScorecardPanel";
 import { PeriodNav, resolvePeriod } from "@/components/panel/PeriodNav";
 import { PanelCard, PanelPage, Pill, StatCard } from "@/components/panel/ui";
+import { secondaryButtonClass } from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Antrenör Karnesi — BlackBox" };
 
 export const dynamic = "force-dynamic";
-
-const linkClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 /**
  * Tek antrenörün karnesi: dönem sayıları, bekleyen işler ve sorumlu olduğu
@@ -69,10 +67,10 @@ export default async function AdminCoachDetailPage({
       description={`${row.email} · ${ORG_ROLE_LABEL[row.role]} · katılım ${formatDateTR(row.joinedAt)}`}
       action={
         <div className="flex flex-wrap gap-2">
-          <Link href="/yonetim/kocluk" className={linkClass}>
+          <Link href="/yonetim/kocluk" className={secondaryButtonClass}>
             Koçluk
           </Link>
-          <Link href="/yonetim/kadro" className={linkClass}>
+          <Link href="/yonetim/kadro" className={secondaryButtonClass}>
             Hakediş Ayarı
           </Link>
         </div>
@@ -147,7 +145,7 @@ export default async function AdminCoachDetailPage({
         title={`Sorumlu Olduğu Sporcular (${members.length})`}
         description={`${bands.kritik} ${RADAR_BAND_LABEL.kritik.toLocaleLowerCase("tr-TR")} · ${bands.izle} ${RADAR_BAND_LABEL.izle.toLocaleLowerCase("tr-TR")} · ${bands.yeni} yeni · ${bands.yolunda} yolunda`}
         action={
-          <Link href="/personel/icgoruler" className={linkClass}>
+          <Link href="/personel/icgoruler" className={secondaryButtonClass}>
             Takip Radarı
           </Link>
         }

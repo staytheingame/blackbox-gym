@@ -18,7 +18,7 @@ export function ReminderToggle({ enabled }: { enabled: boolean }) {
 
       <button
         type="submit"
-        className={`rounded-sm px-4 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
+        className={`inline-flex min-h-11 items-center justify-center rounded-sm px-4 py-2 text-xs font-bold uppercase tracking-wide transition-colors sm:min-h-9 ${
           enabled
             ? "border border-brand-border text-brand-muted hover:border-brand-yellow hover:text-brand-yellow"
             : "bg-brand-yellow text-brand-black hover:bg-brand-white"

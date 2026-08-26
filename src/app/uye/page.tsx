@@ -26,6 +26,10 @@ import {
   Pill,
   StatCard,
 } from "@/components/panel/ui";
+import {
+  headerLinkClass,
+  primaryButtonClass,
+} from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Özet — BlackBox Panel" };
 
@@ -122,7 +126,7 @@ export default async function MemberDashboardPage() {
           </div>
           <Link
             href="/uye/onaylar"
-            className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white"
+            className={`w-full sm:w-auto ${primaryButtonClass}`}
           >
             Formları Aç
           </Link>
@@ -160,7 +164,7 @@ export default async function MemberDashboardPage() {
             </span>
             <Link
               href="/uye/kusak"
-              className="rounded-sm border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+              className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow sm:min-h-8"
             >
               Kuşağım
             </Link>
@@ -180,7 +184,7 @@ export default async function MemberDashboardPage() {
           </div>
           <Link
             href="/uye/check-in"
-            className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white"
+            className={`w-full sm:w-auto ${primaryButtonClass}`}
           >
             Check-in Gönder
           </Link>
@@ -193,7 +197,7 @@ export default async function MemberDashboardPage() {
           action={
             <Link
               href="/uye/antrenman"
-              className="text-xs font-bold uppercase tracking-wide text-brand-yellow hover:text-brand-white"
+              className={headerLinkClass}
             >
               Tümü
             </Link>
@@ -232,7 +236,7 @@ export default async function MemberDashboardPage() {
           action={
             <Link
               href="/uye/lig"
-              className="text-xs font-bold uppercase tracking-wide text-brand-yellow hover:text-brand-white"
+              className={headerLinkClass}
             >
               Lig
             </Link>

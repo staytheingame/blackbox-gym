@@ -22,15 +22,14 @@ import {
   saveRecurringExpenseAction,
   toggleRecurringExpenseAction,
 } from "../actions";
+import { secondaryButtonClass } from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Giderler — BlackBox Yönetim" };
 
 export const dynamic = "force-dynamic";
 
-const linkClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 const rowButton =
-  "text-[0.65rem] font-bold uppercase tracking-wide text-brand-muted transition-colors hover:text-brand-yellow";
+  "inline-flex min-h-11 items-center text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:text-brand-yellow sm:min-h-0 sm:text-[0.65rem]";
 
 /**
  * Salon maliyeti: tek seferlik giderler + her ay tekrarlayan sabit kalemler.
@@ -69,7 +68,7 @@ export default async function AdminExpensesPage({
       title="Giderler"
       description="Salonun harcamaları. Sabit kalemler her ay tekrarlar; tek seferlik giderler elle girilir."
       action={
-        <Link href="/yonetim/muhasebe" className={linkClass}>
+        <Link href="/yonetim/muhasebe" className={secondaryButtonClass}>
           ← Kasa
         </Link>
       }
@@ -102,7 +101,7 @@ export default async function AdminExpensesPage({
         action={
           activeRecurring.length > 0 ? (
             <form action={applyRecurringExpensesAction}>
-              <button type="submit" className={linkClass}>
+              <button type="submit" className={secondaryButtonClass}>
                 Bu Ayı İşle
               </button>
             </form>

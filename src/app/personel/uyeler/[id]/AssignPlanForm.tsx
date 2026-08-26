@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { assignPlanAction, type AssignPlanState } from "./actions";
+import { primaryButtonClass } from "@/components/panel/form";
 
 const initialState: AssignPlanState = {};
 
@@ -71,7 +72,7 @@ export function AssignPlanForm({
           name="templateId"
           required
           defaultValue=""
-          className="mt-1 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow"
+          className="mt-1 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-base text-brand-white outline-none focus:border-brand-yellow sm:text-sm"
         >
           <option value="" disabled>
             Şablon seç…
@@ -97,7 +98,7 @@ export function AssignPlanForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white disabled:opacity-60"
+        className={primaryButtonClass}
       >
         {pending ? "Atanıyor…" : "Programı Ata"}
       </button>

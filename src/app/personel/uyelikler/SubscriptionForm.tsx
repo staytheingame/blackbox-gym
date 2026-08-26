@@ -5,11 +5,11 @@ import {
   startSubscriptionAction,
   type SubscriptionFormState,
 } from "./actions";
-
-const inputClass =
-  "mt-1 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow";
-const labelClass =
-  "text-xs font-bold uppercase tracking-wide text-brand-muted";
+import {
+  inputClass,
+  labelClass,
+  primaryButtonClass,
+} from "@/components/panel/form";
 
 const initialState: SubscriptionFormState = {};
 
@@ -194,7 +194,7 @@ export function SubscriptionForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white disabled:opacity-60"
+        className={primaryButtonClass}
       >
         {pending ? "Kaydediliyor…" : "Aboneliği Başlat / Yenile"}
       </button>

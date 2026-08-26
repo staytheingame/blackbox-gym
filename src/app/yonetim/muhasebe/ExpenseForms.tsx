@@ -6,6 +6,12 @@ import {
   EXPENSE_CATEGORY_LABEL,
 } from "@/domain/finance/ledger";
 import type { FinanceState } from "./actions";
+import {
+  hintClass,
+  inputClass,
+  labelClass,
+  primaryButtonClass,
+} from "@/components/panel/form";
 
 const initialState: FinanceState = {};
 
@@ -81,7 +87,7 @@ export function ExpenseForm({
         <p className="text-sm font-semibold text-brand-yellow">{state.success}</p>
       )}
 
-      <button type="submit" disabled={pending} className={submitClass}>
+      <button type="submit" disabled={pending} className={primaryButtonClass}>
         {pending ? "Kaydediliyor…" : "Gideri Kaydet"}
       </button>
     </form>
@@ -145,16 +151,10 @@ export function RecurringExpenseForm({ action }: { action: Action }) {
         <p className="text-sm font-semibold text-brand-yellow">{state.success}</p>
       )}
 
-      <button type="submit" disabled={pending} className={submitClass}>
+      <button type="submit" disabled={pending} className={primaryButtonClass}>
         {pending ? "Ekleniyor…" : "Sabit Gider Ekle"}
       </button>
     </form>
   );
 }
 
-const inputClass =
-  "mt-1 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow";
-const labelClass = "text-xs font-bold uppercase tracking-wide text-brand-muted";
-const hintClass = "mt-1 text-[0.7rem] text-brand-muted";
-const submitClass =
-  "rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white disabled:opacity-60";

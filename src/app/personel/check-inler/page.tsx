@@ -7,6 +7,7 @@ import { listPendingCheckIns } from "@/lib/queries/staff";
 import { formatDateTR } from "@/lib/date";
 import { EmptyState, PanelCard, PanelPage, Pill } from "@/components/panel/ui";
 import { reviewCheckInAction } from "../actions";
+import { rowNameLinkClass } from "@/components/panel/form";
 
 export const metadata: Metadata = {
   title: "Check-in'ler — BlackBox Panel",
@@ -37,7 +38,7 @@ export default async function StaffCheckInQueuePage() {
                 <div>
                   <Link
                     href={`/personel/uyeler/${checkIn.memberId}`}
-                    className="text-sm font-semibold text-brand-white hover:text-brand-yellow"
+                    className={rowNameLinkClass}
                   >
                     {checkIn.memberName}
                   </Link>
@@ -72,7 +73,7 @@ export default async function StaffCheckInQueuePage() {
                   >
                     <button
                       type="submit"
-                      className="rounded-sm border border-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-yellow transition-colors hover:bg-brand-yellow hover:text-brand-black"
+                      className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-yellow transition-colors hover:bg-brand-yellow hover:text-brand-black sm:min-h-8"
                     >
                       İncelendi İşaretle
                     </button>

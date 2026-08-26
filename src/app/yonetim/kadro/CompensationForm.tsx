@@ -7,6 +7,7 @@ import {
   type CompensationModel,
 } from "@/domain/finance/earnings";
 import { saveCompensationAction, type CompensationState } from "./actions";
+import { hintClass, inputClass, labelClass } from "@/components/panel/form";
 
 const initialState: CompensationState = {};
 
@@ -152,7 +153,3 @@ export function CompensationForm({
   );
 }
 
-const inputClass =
-  "mt-1 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow";
-const labelClass = "text-xs font-bold uppercase tracking-wide text-brand-muted";
-const hintClass = "mt-1 text-[0.7rem] text-brand-muted";

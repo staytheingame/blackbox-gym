@@ -14,14 +14,14 @@ import {
   updateDayAction,
   type TemplateFormState,
 } from "../actions";
+import {
+  inputClass,
+  labelClass,
+  primaryButtonClass,
+} from "@/components/panel/form";
 
 const initialState: TemplateFormState = {};
 
-const inputClass =
-  "w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow";
-const labelClass = "text-xs font-bold uppercase tracking-wide text-brand-muted";
-const primaryButton =
-  "rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black hover:bg-brand-white disabled:opacity-60";
 const ghostButton =
   "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow disabled:opacity-60";
 
@@ -120,7 +120,7 @@ export function AddDayForm({
 
       <Feedback state={state} />
 
-      <button type="submit" disabled={pending} className={primaryButton}>
+      <button type="submit" disabled={pending} className={primaryButtonClass}>
         {pending ? "Ekleniyor…" : "Gün Ekle"}
       </button>
     </form>
@@ -384,7 +384,7 @@ export function DeleteTemplateButton({
         <button
           type="submit"
           disabled={pending || assignmentCount > 0}
-          className="rounded-sm border border-red-400/40 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-400/10 disabled:opacity-40"
+          className="inline-flex min-h-11 items-center justify-center rounded-sm border border-red-400/40 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-400/10 disabled:opacity-40 sm:min-h-8"
         >
           {pending ? "Siliniyor…" : "Şablonu Sil"}
         </button>

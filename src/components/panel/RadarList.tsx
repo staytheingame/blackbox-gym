@@ -7,6 +7,7 @@ import {
 import type { MemberRadarRow } from "@/lib/queries/radar";
 import { formatShortDateTR } from "@/lib/date";
 import { EmptyState, Pill } from "@/components/panel/ui";
+import { rowNameLinkClass } from "@/components/panel/form";
 
 /**
  * Radar satırı — hem antrenörün "Takip" ekranında hem yöneticinin koç
@@ -84,7 +85,7 @@ export function RadarRow({
           <div className="min-w-0">
             <Link
               href={`/personel/uyeler/${row.id}`}
-              className="text-sm font-semibold text-brand-white transition-colors hover:text-brand-yellow"
+              className={rowNameLinkClass}
             >
               {row.fullName}
               <span className="ml-2 text-xs text-brand-muted">
@@ -113,7 +114,7 @@ export function RadarRow({
           </Pill>
           <Link
             href={`/personel/uyeler/${row.id}/analiz`}
-            className="text-[0.65rem] font-bold uppercase tracking-wide text-brand-muted transition-colors hover:text-brand-yellow"
+            className="inline-flex min-h-11 items-center text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:text-brand-yellow sm:min-h-0 sm:text-[0.65rem]"
           >
             Analiz
           </Link>

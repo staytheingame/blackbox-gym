@@ -15,13 +15,11 @@ import {
 } from "@/components/panel/CoachScorecardPanel";
 import { PeriodNav, resolvePeriod } from "@/components/panel/PeriodNav";
 import { EmptyState, PanelCard, PanelPage } from "@/components/panel/ui";
+import { secondaryButtonClass } from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Karnem — BlackBox Panel" };
 
 export const dynamic = "force-dynamic";
-
-const linkClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 /**
  * ANTRENÖRÜN KENDİ KARNESİ.
@@ -72,10 +70,10 @@ export default async function CoachOwnScorecardPage({
       description="Verdiğin dersler, masanda bekleyen işler ve sporcularının durumu. Bu sayılar salon yönetiminin gördüğüyle aynıdır."
       action={
         <div className="flex flex-wrap gap-2">
-          <Link href="/personel/kasa" className={linkClass}>
+          <Link href="/personel/kasa" className={secondaryButtonClass}>
             Hakedişim
           </Link>
-          <Link href="/personel/icgoruler" className={linkClass}>
+          <Link href="/personel/icgoruler" className={secondaryButtonClass}>
             Takip Radarı
           </Link>
         </div>

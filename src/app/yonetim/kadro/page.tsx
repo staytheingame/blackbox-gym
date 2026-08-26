@@ -18,6 +18,7 @@ import { AddStaffForm } from "./AddStaffForm";
 import { PendingInviteRow } from "./PendingInviteRow";
 import { CompensationForm } from "./CompensationForm";
 import { changeRoleAction, setStatusAction } from "./actions";
+import { rowButtonClass } from "@/components/panel/form";
 
 /** Kuruş → form alanında görünecek lira metni ("" = boş bırakılmış). */
 function minorToInput(value: number | null): string {
@@ -28,9 +29,6 @@ function minorToInput(value: number | null): string {
 export const metadata: Metadata = { title: "Kadro — BlackBox Yönetim" };
 
 export const dynamic = "force-dynamic";
-
-const rowButton =
-  "rounded-sm border border-brand-border px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 export default async function AdminStaffPage() {
   const user = await getCurrentUser();
@@ -109,7 +107,7 @@ export default async function AdminStaffPage() {
                             "admin",
                           )}
                         >
-                          <button type="submit" className={rowButton}>
+                          <button type="submit" className={rowButtonClass}>
                             Yönetici Yap
                           </button>
                         </form>
@@ -122,7 +120,7 @@ export default async function AdminStaffPage() {
                             "coach",
                           )}
                         >
-                          <button type="submit" className={rowButton}>
+                          <button type="submit" className={rowButtonClass}>
                             Antrenör Yap
                           </button>
                         </form>
@@ -135,7 +133,7 @@ export default async function AdminStaffPage() {
                             active ? "disabled" : "active",
                           )}
                         >
-                          <button type="submit" className={rowButton}>
+                          <button type="submit" className={rowButtonClass}>
                             {active ? "Hesabı Kapat" : "Hesabı Aç"}
                           </button>
                         </form>

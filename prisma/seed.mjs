@@ -20,7 +20,16 @@ async function main() {
 
   const passwordHash = await bcrypt.hash("test1234", 12);
 
-  // --- Antrenör (coach) ---
+  // --- Personel test hesabı (admin) ---
+  //
+  // Rolü bilerek `admin`: bu hesap salonun kurulumunu yapan hesap, ve antrenör
+  // kadrosunu (`/yonetim/kadro`) yalnız yönetici görür — `coach` kalsaydı
+  // "koç ekle" ekranına hiç ulaşılamazdı. Yönetici antrenör panelini de görür
+  // (bkz. `lib/auth/roles.ts`), yani /personel ekranları kapanmaz.
+  //
+  // Gerçek antrenörler buradan değil, /yonetim/kadro'daki davet bağlantısıyla
+  // eklenir; kapsam kısıtı (antrenör yalnız kendi sporcusunu görür) o hesaplarda
+  // sınanır.
   let staffUser = await prisma.user.findUnique({
     where: { email: "personel@blackbox.test" },
   });
@@ -29,20 +38,34 @@ async function main() {
       data: {
         email: "personel@blackbox.test",
         passwordHash,
-        profile: { create: { displayName: "BlackBox Antrenör" } },
+        profile: { create: { displayName: "BlackBox Yönetim" } },
       },
     });
     await prisma.organizationUser.create({
       data: {
         organizationId: org.id,
         userId: staffUser.id,
-        role: "coach",
+        role: "admin",
         status: "active",
       },
     });
-    console.log("Antrenör oluşturuldu: personel@blackbox.test / test1234");
+    console.log("Personel hesabı oluşturuldu (yönetici): personel@blackbox.test / test1234");
   } else {
-    console.log("Antrenör zaten vardı: personel@blackbox.test");
+    // Hesap eskiden `coach` olarak açılmış olabilir — tohum yeniden
+    // çalıştırıldığında rolü düzeltsin diye upsert, salt create değil.
+    await prisma.organizationUser.upsert({
+      where: {
+        organizationId_userId: { organizationId: org.id, userId: staffUser.id },
+      },
+      update: { role: "admin", status: "active" },
+      create: {
+        organizationId: org.id,
+        userId: staffUser.id,
+        role: "admin",
+        status: "active",
+      },
+    });
+    console.log("Personel hesabı vardı, rolü yönetici yapıldı: personel@blackbox.test");
   }
 
   // --- Yönetici (admin) — /yonetim paneli ---

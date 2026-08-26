@@ -151,7 +151,7 @@ export default async function MemberNutritionPage() {
                           <form action={toggleMealAction.bind(null, meal.id)}>
                             <button
                               type="submit"
-                              className={`rounded-sm px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-wide transition-colors ${
+                              className={`inline-flex min-h-11 items-center justify-center rounded-sm px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors sm:min-h-7 sm:text-[0.65rem] ${
                                 meal.checkedToday
                                   ? "border border-brand-yellow text-brand-yellow hover:bg-brand-yellow/10"
                                   : "bg-brand-yellow text-brand-black hover:bg-brand-white"

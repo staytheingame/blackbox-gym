@@ -20,7 +20,7 @@ export default function MemberToolsPage() {
             action={
               <Link
                 href={tool.href}
-                className="rounded-sm border border-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-yellow transition-colors hover:bg-brand-yellow hover:text-brand-black"
+                className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-yellow transition-colors hover:bg-brand-yellow hover:text-brand-black sm:min-h-8"
               >
                 Aç
               </Link>

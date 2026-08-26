@@ -17,13 +17,14 @@ import {
   Pill,
   StatCard,
 } from "@/components/panel/ui";
+import {
+  rowNameLinkClass,
+  secondaryButtonClass,
+} from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Koçluk — BlackBox Yönetim" };
 
 export const dynamic = "force-dynamic";
-
-const linkClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 function percent(value: number | null): string {
   return value === null ? "—" : `%${value}`;
@@ -68,10 +69,10 @@ export default async function AdminCoachingPage({
       description="Kadronun iş görünümü: kim kaç ders verdi, masasında ne birikti, sorumlu olduğu sporcular ne durumda. Bu ekran antrenörü notlandırmaz — bekleyen işi ve yardım gereken yeri gösterir."
       action={
         <div className="flex flex-wrap gap-2">
-          <Link href="/yonetim/kadro" className={linkClass}>
+          <Link href="/yonetim/kadro" className={secondaryButtonClass}>
             Kadro & Hakediş Ayarı
           </Link>
-          <Link href="/yonetim/muhasebe/hakedis" className={linkClass}>
+          <Link href="/yonetim/muhasebe/hakedis" className={secondaryButtonClass}>
             Hakediş
           </Link>
         </div>
@@ -175,7 +176,7 @@ export default async function AdminCoachingPage({
                   <div className="min-w-0">
                     <Link
                       href={`/yonetim/kocluk/${row.coachUserId}`}
-                      className="text-sm font-semibold text-brand-white transition-colors hover:text-brand-yellow"
+                      className={rowNameLinkClass}
                     >
                       {row.displayName}
                     </Link>
@@ -218,7 +219,7 @@ export default async function AdminCoachingPage({
                     {row.scorecard.attention.length > 2 && (
                       <Link
                         href={`/yonetim/kocluk/${row.coachUserId}`}
-                        className="mt-2 inline-block text-xs font-bold uppercase tracking-wide text-brand-yellow hover:text-brand-white"
+                        className="mt-2 inline-flex min-h-11 items-center text-xs font-bold uppercase tracking-wide text-brand-yellow hover:text-brand-white sm:min-h-0"
                       >
                         +{row.scorecard.attention.length - 2} madde daha →
                       </Link>

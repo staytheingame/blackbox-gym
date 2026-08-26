@@ -15,13 +15,11 @@ import {
 } from "@/components/panel/ui";
 import { PlanForm } from "./PlanForm";
 import { archivePlanAction, restorePlanAction } from "./actions";
+import { rowButtonClass } from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Paketler — BlackBox Yönetim" };
 
 export const dynamic = "force-dynamic";
-
-const rowButton =
-  "rounded-sm border border-brand-border px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 export default async function AdminPlansPage() {
   const user = await getCurrentUser();
@@ -111,13 +109,13 @@ export default async function AdminPlansPage() {
                   <div className="flex flex-wrap gap-2 border-t border-brand-border pt-4">
                     {plan.isActive ? (
                       <form action={archivePlanAction.bind(null, plan.id)}>
-                        <button type="submit" className={rowButton}>
+                        <button type="submit" className={rowButtonClass}>
                           Satıştan Kaldır
                         </button>
                       </form>
                     ) : (
                       <form action={restorePlanAction.bind(null, plan.id)}>
-                        <button type="submit" className={rowButton}>
+                        <button type="submit" className={rowButtonClass}>
                           Tekrar Satışa Al
                         </button>
                       </form>

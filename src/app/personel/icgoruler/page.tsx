@@ -23,6 +23,10 @@ import {
   Pill,
   StatCard,
 } from "@/components/panel/ui";
+import {
+  activeChipClass,
+  secondaryButtonClass,
+} from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Takip Radarı — BlackBox Panel" };
 
@@ -44,11 +48,6 @@ const SIGNAL_LABEL: Record<RadarSignalKey, string> = {
   "hesap-yok": "Hesabını kurmadı",
   antrenorsuz: "Antrenörü yok",
 };
-
-const chipClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
-const activeChipClass =
-  "rounded-sm bg-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-black";
 
 function isBand(value: string | undefined): value is RadarBand {
   return (RADAR_BANDS as readonly string[]).includes(value ?? "");
@@ -108,7 +107,7 @@ export default async function StaffRadarPage({
           : "Sorumlusu olduğun sporcular, ilgilenme sırasına göre. Puan sporcunun notu değil — bugün kimden başlanacağını söyler."
       }
       action={
-        <Link href="/personel/uyeler" className={chipClass}>
+        <Link href="/personel/uyeler" className={secondaryButtonClass}>
           Sporcu Listesi →
         </Link>
       }
@@ -143,7 +142,7 @@ export default async function StaffRadarPage({
                   sinyal: signalFilter === row.key ? undefined : row.key,
                 })}
                 className={
-                  signalFilter === row.key ? activeChipClass : chipClass
+                  signalFilter === row.key ? activeChipClass : secondaryButtonClass
                 }
               >
                 {SIGNAL_LABEL[row.key]}: {row.count}
@@ -160,7 +159,7 @@ export default async function StaffRadarPage({
           <div className="flex flex-wrap gap-2">
             <Link
               href={filterHref({ sinyal: signalFilter })}
-              className={bandFilter ? chipClass : activeChipClass}
+              className={bandFilter ? secondaryButtonClass : activeChipClass}
             >
               Hepsi
             </Link>
@@ -171,7 +170,7 @@ export default async function StaffRadarPage({
                   bant: bandFilter === band ? undefined : band,
                   sinyal: signalFilter,
                 })}
-                className={bandFilter === band ? activeChipClass : chipClass}
+                className={bandFilter === band ? activeChipClass : secondaryButtonClass}
               >
                 {RADAR_BAND_LABEL[band]}
               </Link>

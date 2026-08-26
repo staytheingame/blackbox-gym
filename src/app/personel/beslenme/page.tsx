@@ -21,6 +21,7 @@ import {
   StatCard,
 } from "@/components/panel/ui";
 import { PlanForm } from "./PlanForm";
+import { rowNameLinkClass } from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Beslenme — BlackBox Panel" };
 
@@ -99,7 +100,7 @@ export default async function StaffNutritionPage() {
                 <div>
                   <Link
                     href={`/personel/beslenme/${plan.id}`}
-                    className="text-sm font-semibold text-brand-white transition-colors hover:text-brand-yellow"
+                    className={rowNameLinkClass}
                   >
                     {plan.title}
                   </Link>

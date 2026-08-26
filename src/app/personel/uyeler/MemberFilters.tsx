@@ -1,4 +1,10 @@
 import Link from "next/link";
+import {
+  activeChipClass,
+  headerLinkClass,
+  primaryButtonClass,
+  secondaryButtonClass,
+} from "@/components/panel/form";
 
 /**
  * Üye listesinin süzgeci. Bilinçli olarak **client component değil**:
@@ -29,11 +35,6 @@ export const MEMBER_STATUS_LABEL: Record<string, string> = {
   inactive: "Pasif",
   blocked: "Engelli",
 };
-
-const chipClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
-const activeChipClass =
-  "rounded-sm bg-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-black";
 
 /** Mevcut süzgeci koruyup tek anahtarı değiştiren bağlantı. */
 export function memberListHref(query: MemberListQuery): string {
@@ -82,11 +83,11 @@ export function MemberFilters({
           defaultValue={query.q ?? ""}
           placeholder="Ad, üye no ya da e-posta ara"
           aria-label="Sporcu ara"
-          className="min-w-0 flex-1 rounded-sm border border-brand-border bg-brand-surface-2 px-3 py-2 text-sm text-brand-white placeholder:text-brand-muted focus:border-brand-yellow focus:outline-none"
+          className="min-w-0 flex-1 rounded-sm border border-brand-border bg-brand-surface-2 px-3 py-2 text-base text-brand-white placeholder:text-brand-muted focus:border-brand-yellow focus:outline-none sm:text-sm"
         />
         <button
           type="submit"
-          className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white"
+          className={primaryButtonClass}
         >
           Ara
         </button>
@@ -95,7 +96,7 @@ export function MemberFilters({
       <div className="flex flex-wrap gap-2">
         <Link
           href={memberListHref({ ...query, durum: undefined })}
-          className={query.durum ? chipClass : activeChipClass}
+          className={query.durum ? secondaryButtonClass : activeChipClass}
         >
           Tümü ({totalCount})
         </Link>
@@ -106,7 +107,7 @@ export function MemberFilters({
               ...query,
               durum: query.durum === status.value ? undefined : status.value,
             })}
-            className={query.durum === status.value ? activeChipClass : chipClass}
+            className={query.durum === status.value ? activeChipClass : secondaryButtonClass}
           >
             {MEMBER_STATUS_LABEL[status.value] ?? status.value} ({status.count})
           </Link>
@@ -127,7 +128,7 @@ export function MemberFilters({
                   query.antrenor === coach.userId ? undefined : coach.userId,
               })}
               className={
-                query.antrenor === coach.userId ? activeChipClass : chipClass
+                query.antrenor === coach.userId ? activeChipClass : secondaryButtonClass
               }
             >
               {coach.displayName}
@@ -135,7 +136,7 @@ export function MemberFilters({
           ))}
           <Link
             href={memberListHref({ ...query, antrenor: "yok" })}
-            className={query.antrenor === "yok" ? activeChipClass : chipClass}
+            className={query.antrenor === "yok" ? activeChipClass : secondaryButtonClass}
           >
             Atanmamış
           </Link>
@@ -151,7 +152,7 @@ export function MemberFilters({
             key={sort}
             href={memberListHref({ ...query, sirala: sort })}
             className={
-              (query.sirala ?? "risk") === sort ? activeChipClass : chipClass
+              (query.sirala ?? "risk") === sort ? activeChipClass : secondaryButtonClass
             }
           >
             {MEMBER_SORT_LABEL[sort]}
@@ -165,7 +166,7 @@ export function MemberFilters({
             </span>
             <Link
               href="/personel/uyeler"
-              className="text-xs font-bold uppercase tracking-wide text-brand-yellow hover:text-brand-white"
+              className={headerLinkClass}
             >
               Süzgeci temizle
             </Link>

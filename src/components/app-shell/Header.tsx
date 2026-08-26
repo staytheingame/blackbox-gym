@@ -52,7 +52,7 @@ export function Header() {
           </Link>
           <Link
             href={ctaNav.href}
-            className="rounded-sm bg-brand-yellow px-4 py-2 text-sm font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white"
+            className="inline-flex min-h-11 items-center justify-center rounded-sm bg-brand-yellow px-4 py-2 text-sm font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white sm:min-h-10"
           >
             {ctaNav.label}
           </Link>

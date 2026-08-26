@@ -27,6 +27,7 @@ import {
   type MemberListQuery,
   type MemberSort,
 } from "./MemberFilters";
+import { secondaryButtonClass } from "@/components/panel/form";
 
 export const metadata: Metadata = {
   title: "Üyeler — BlackBox Panel",
@@ -136,7 +137,7 @@ export default async function StaffMembersPage({
       action={
         <Link
           href="/personel/icgoruler"
-          className="rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+          className={secondaryButtonClass}
         >
           Takip Radarı →
         </Link>

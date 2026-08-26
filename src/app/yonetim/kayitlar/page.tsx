@@ -61,7 +61,7 @@ export default async function AdminAuditPage({
         // eslint-disable-next-line @next/next/no-html-link-for-pages
         <a
           href="/api/export/denetim"
-          className="rounded-sm border border-brand-border px-3 py-2 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+          className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-3 py-2 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow sm:min-h-9"
         >
           CSV indir
         </a>

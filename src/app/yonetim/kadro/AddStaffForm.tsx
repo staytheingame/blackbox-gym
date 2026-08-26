@@ -3,6 +3,11 @@
 import { useActionState, useEffect, useRef } from "react";
 import { InviteLinkBox } from "@/components/panel/InviteLinkBox";
 import { inviteStaffAction, type StaffFormState } from "./actions";
+import {
+  inputClass,
+  labelClass,
+  primaryButtonClass,
+} from "@/components/panel/form";
 
 const initialState: StaffFormState = {};
 
@@ -58,7 +63,7 @@ export function AddStaffForm() {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black hover:bg-brand-white disabled:opacity-60"
+          className={primaryButtonClass}
         >
           {pending ? "Davet üretiliyor…" : "Davet Bağlantısı Üret"}
         </button>
@@ -75,6 +80,3 @@ export function AddStaffForm() {
   );
 }
 
-const inputClass =
-  "mt-1 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow";
-const labelClass = "text-xs font-bold uppercase tracking-wide text-brand-muted";

@@ -7,6 +7,10 @@ import {
   type Period,
   type PeriodKind,
 } from "@/domain/finance/period";
+import {
+  activeChipClass,
+  secondaryButtonClass,
+} from "@/components/panel/form";
 
 /**
  * Günlük / haftalık / aylık dönem seçici + ileri-geri okları.
@@ -38,11 +42,6 @@ export function resolvePeriod(
   };
 }
 
-const linkClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
-const activeClass =
-  "rounded-sm bg-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-black";
-
 export function PeriodNav({
   basePath,
   kind,
@@ -64,7 +63,7 @@ export function PeriodNav({
           <Link
             key={option}
             href={href(option, 0)}
-            className={option === kind ? activeClass : linkClass}
+            className={option === kind ? activeChipClass : secondaryButtonClass}
           >
             {PERIOD_LABEL[option]}
           </Link>
@@ -72,18 +71,18 @@ export function PeriodNav({
       </div>
 
       <div className="flex items-center gap-2">
-        <Link href={href(kind, offset - 1)} className={linkClass} aria-label="Önceki dönem">
+        <Link href={href(kind, offset - 1)} className={secondaryButtonClass} aria-label="Önceki dönem">
           ‹
         </Link>
         <span className="min-w-40 text-center text-xs font-semibold text-brand-white">
           {period.label}
         </span>
         {offset < 0 ? (
-          <Link href={href(kind, offset + 1)} className={linkClass} aria-label="Sonraki dönem">
+          <Link href={href(kind, offset + 1)} className={secondaryButtonClass} aria-label="Sonraki dönem">
             ›
           </Link>
         ) : (
-          <span className={`${linkClass} opacity-30`}>›</span>
+          <span className={`${secondaryButtonClass} opacity-30`}>›</span>
         )}
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { loginAction, type LoginState } from "./actions";
+import { inputClass, labelClass } from "@/components/panel/form";
 
 const initialState: LoginState = {};
 
@@ -14,10 +15,7 @@ export function LoginForm() {
   return (
     <form action={formAction} className="space-y-4">
       <div>
-        <label
-          htmlFor="email"
-          className="text-xs font-bold uppercase tracking-wide text-brand-muted"
-        >
+        <label htmlFor="email" className={labelClass}>
           E-posta
         </label>
         <input
@@ -26,14 +24,11 @@ export function LoginForm() {
           type="email"
           required
           autoComplete="username"
-          className="mt-1 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow"
+          className={inputClass}
         />
       </div>
       <div>
-        <label
-          htmlFor="password"
-          className="text-xs font-bold uppercase tracking-wide text-brand-muted"
-        >
+        <label htmlFor="password" className={labelClass}>
           Şifre
         </label>
         <input
@@ -42,7 +37,7 @@ export function LoginForm() {
           type="password"
           required
           autoComplete="current-password"
-          className="mt-1 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow"
+          className={inputClass}
         />
       </div>
 

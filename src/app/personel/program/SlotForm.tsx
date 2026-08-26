@@ -2,11 +2,11 @@
 
 import { useActionState } from "react";
 import { createSlotAction, type SlotFormState } from "./actions";
-
-const inputClass =
-  "mt-1 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow";
-const labelClass =
-  "text-xs font-bold uppercase tracking-wide text-brand-muted";
+import {
+  inputClass,
+  labelClass,
+  primaryButtonClass,
+} from "@/components/panel/form";
 
 const initialState: SlotFormState = {};
 
@@ -18,7 +18,19 @@ const KINDS = [
   { value: "teknik", label: "Teknik Çalışma" },
 ];
 
-export function SlotForm({ defaultDate }: { defaultDate: string }) {
+/**
+ * Takvimdeki boş hücreye basınca sayfa `?tarih=&saat=` ile döner ve buradaki
+ * varsayılanlar dolar. Form istemci bileşeni olduğu için çağıran sayfa
+ * `key={`${tarih}-${saat}`}` verir — yoksa React alanları yeniden kurmaz ve
+ * ikinci tıklamada eski saat ekranda kalır.
+ */
+export function SlotForm({
+  defaultDate,
+  defaultTime = "19:00",
+}: {
+  defaultDate: string;
+  defaultTime?: string;
+}) {
   const [state, formAction, pending] = useActionState(
     createSlotAction,
     initialState,
@@ -50,7 +62,7 @@ export function SlotForm({ defaultDate }: { defaultDate: string }) {
             name="time"
             type="time"
             required
-            defaultValue="19:00"
+            defaultValue={defaultTime}
             step={900}
             className={inputClass}
           />
@@ -170,7 +182,7 @@ export function SlotForm({ defaultDate }: { defaultDate: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white disabled:opacity-60"
+        className={primaryButtonClass}
       >
         {pending ? "Açılıyor…" : "Saati Aç"}
       </button>

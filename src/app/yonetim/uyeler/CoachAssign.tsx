@@ -33,7 +33,7 @@ export function CoachAssign({
         defaultValue={currentCoachUserId ?? ""}
         disabled={pending}
         onChange={(event) => event.currentTarget.form?.requestSubmit()}
-        className="rounded-sm border border-brand-border bg-brand-black px-2 py-1 text-xs text-brand-white outline-none focus:border-brand-yellow disabled:opacity-60"
+        className="rounded-sm border border-brand-border bg-brand-black px-2 py-1 text-base text-brand-white outline-none focus:border-brand-yellow disabled:opacity-60 sm:text-xs"
         aria-label="Sorumlu antrenör"
       >
         <option value="">Atanmadı</option>

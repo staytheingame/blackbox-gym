@@ -19,13 +19,14 @@ import {
 import { PeriodNav, resolvePeriod } from "@/components/panel/PeriodNav";
 import { PaymentForm } from "../PaymentForm";
 import { deletePaymentAction, recordPaymentAction } from "../actions";
+import {
+  rowNameLinkClass,
+  secondaryButtonClass,
+} from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Tahsilat — BlackBox Yönetim" };
 
 export const dynamic = "force-dynamic";
-
-const linkClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 export default async function AdminPaymentsPage({
   searchParams,
@@ -60,7 +61,7 @@ export default async function AdminPaymentsPage({
       title="Tahsilat"
       description="Sporculardan alınan para. Bir ödeme üyeliğe bağlanırsa o üyeliğin borcundan düşer; bağlanmazsa serbest gelir olarak kasaya girer."
       action={
-        <Link href="/yonetim/muhasebe" className={linkClass}>
+        <Link href="/yonetim/muhasebe" className={secondaryButtonClass}>
           ← Kasa
         </Link>
       }
@@ -107,7 +108,7 @@ export default async function AdminPaymentsPage({
                 <div>
                   <Link
                     href={`/personel/uyeler/${row.memberId}`}
-                    className="text-sm font-semibold text-brand-white transition-colors hover:text-brand-yellow"
+                    className={rowNameLinkClass}
                   >
                     {row.memberName}
                   </Link>

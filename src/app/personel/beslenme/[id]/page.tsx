@@ -28,11 +28,12 @@ import {
   deletePlanAction,
   setPlanStatusAction,
 } from "../actions";
+import {
+  primaryButtonClass,
+  rowButtonClass,
+} from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Beslenme Planı — BlackBox Panel" };
-
-const smallButton =
-  "rounded-sm border border-brand-border px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 export default async function StaffNutritionPlanPage({
   params,
@@ -62,10 +63,10 @@ export default async function StaffNutritionPlanPage({
       description={`${plan.memberName} · ${plan.meals.length} öğün · ${formatWeekDays(plan.weekDaysCsv)}`}
       action={
         <div className="flex flex-wrap items-center gap-2">
-          <Link href="/personel/beslenme" className={smallButton}>
+          <Link href="/personel/beslenme" className={rowButtonClass}>
             ← Planlar
           </Link>
-          <Link href={`/personel/uyeler/${plan.memberId}`} className={smallButton}>
+          <Link href={`/personel/uyeler/${plan.memberId}`} className={rowButtonClass}>
             Sporcu Kartı
           </Link>
         </div>
@@ -115,7 +116,7 @@ export default async function StaffNutritionPlanPage({
           <form action={setPlanStatusAction.bind(null, plan.id, "aktif")}>
             <button
               type="submit"
-              className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white"
+              className={primaryButtonClass}
             >
               Yayına Al
             </button>
@@ -123,14 +124,14 @@ export default async function StaffNutritionPlanPage({
         )}
         {plan.status === "aktif" && (
           <form action={setPlanStatusAction.bind(null, plan.id, "arsiv")}>
-            <button type="submit" className={smallButton}>
+            <button type="submit" className={rowButtonClass}>
               Arşive Al
             </button>
           </form>
         )}
         {plan.status === "arsiv" && (
           <form action={setPlanStatusAction.bind(null, plan.id, "taslak")}>
-            <button type="submit" className={smallButton}>
+            <button type="submit" className={rowButtonClass}>
               Taslağa Çevir
             </button>
           </form>

@@ -16,6 +16,10 @@ import {
   StatCard,
 } from "@/components/panel/ui";
 import { CoachAssign } from "./CoachAssign";
+import {
+  rowNameLinkClass,
+  secondaryButtonClass,
+} from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Sporcular — BlackBox Yönetim" };
 
@@ -27,9 +31,6 @@ const STATUS_LABEL: Record<string, string> = {
   inactive: "Pasif",
   blocked: "Engelli",
 };
-
-const linkClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 export default async function AdminMembersPage() {
   const user = await getCurrentUser();
@@ -67,7 +68,7 @@ export default async function AdminMembersPage() {
       title="Sporcular"
       description="Salon geneli sporcu listesi: hesap durumu, üyelik durumu, sorumlu antrenör ve sessizleşenler. Antrenör kendi panelinde yalnız kendi sporcusunu görür — devir buradan yapılır."
       action={
-        <Link href="/personel/uyeler" className={linkClass}>
+        <Link href="/personel/uyeler" className={secondaryButtonClass}>
           Sporcu Ekle →
         </Link>
       }
@@ -126,7 +127,7 @@ export default async function AdminMembersPage() {
           title={`Aktif Ama Üyeliksiz (${withoutMembership.length})`}
           description="Kaydı aktif görünüyor ama yürürlükte paketi yok — bu sporcular ders rezervasyonu yapamaz."
           action={
-            <Link href="/personel/uyelikler" className={linkClass}>
+            <Link href="/personel/uyelikler" className={secondaryButtonClass}>
               Üyelik Başlat
             </Link>
           }
@@ -139,7 +140,7 @@ export default async function AdminMembersPage() {
               >
                 <Link
                   href={`/personel/uyeler/${row.id}`}
-                  className="text-sm font-semibold text-brand-white transition-colors hover:text-brand-yellow"
+                  className={rowNameLinkClass}
                 >
                   {row.fullName}
                   <span className="ml-2 text-xs text-brand-muted">
@@ -162,7 +163,7 @@ export default async function AdminMembersPage() {
           title={`Hesabını Kurmayanlar (${withoutAccount.size})`}
           description="Bu sporculara bildirim ve ders hatırlatması gitmez."
           action={
-            <Link href="/personel/davetler" className={linkClass}>
+            <Link href="/personel/davetler" className={secondaryButtonClass}>
               Davetleri Yönet
             </Link>
           }
@@ -207,7 +208,7 @@ export default async function AdminMembersPage() {
                 <div>
                   <Link
                     href={`/personel/uyeler/${row.id}`}
-                    className="text-sm font-semibold text-brand-white transition-colors hover:text-brand-yellow"
+                    className={rowNameLinkClass}
                   >
                     {row.fullName}
                     <span className="ml-2 text-xs text-brand-muted">

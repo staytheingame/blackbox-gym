@@ -26,7 +26,7 @@ export function ReissueButton({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow disabled:opacity-60"
+          className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow disabled:opacity-60 sm:min-h-8"
         >
           {pending ? "Üretiliyor…" : label}
         </button>

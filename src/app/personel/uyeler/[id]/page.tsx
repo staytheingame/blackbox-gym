@@ -39,11 +39,12 @@ import { WAIVER_STATE_LABEL } from "@/domain/waivers/status";
 import { StaffTrainingLogForm } from "./StaffTrainingLogForm";
 import { AssignPlanForm } from "./AssignPlanForm";
 import { reviewCheckInAction } from "../../actions";
+import {
+  primaryButtonClass,
+  secondaryButtonClass,
+} from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Üye Detayı — BlackBox Panel" };
-
-const financeLinkClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 const typeLabels: Record<string, string> = {
   boks: "Boks",
@@ -144,19 +145,19 @@ export default async function StaffMemberDetailPage({
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/personel/uyeler/${member.id}/analiz`}
-            className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white"
+            className={primaryButtonClass}
           >
             Analiz
           </Link>
           <Link
             href="/personel/beslenme"
-            className="rounded-sm border border-brand-border px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+            className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow sm:min-h-9"
           >
             Beslenme
           </Link>
           <Link
             href="/personel/uyeler"
-            className="rounded-sm border border-brand-border px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+            className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow sm:min-h-9"
           >
             Üye Listesi
           </Link>
@@ -306,7 +307,7 @@ export default async function StaffMemberDetailPage({
         title="Ödeme Durumu"
         description="Bu sporcunun üyelik borcu ve tahsilat geçmişi."
         action={
-          <Link href="/personel/kasa" className={financeLinkClass}>
+          <Link href="/personel/kasa" className={secondaryButtonClass}>
             Tahsilat Gir →
           </Link>
         }
@@ -397,7 +398,7 @@ export default async function StaffMemberDetailPage({
           action={
             <Link
               href="/personel/onaylar"
-              className="rounded-sm border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+              className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow sm:min-h-8"
             >
               Formlar
             </Link>
@@ -432,7 +433,7 @@ export default async function StaffMemberDetailPage({
           action={
             <Link
               href={`/personel/kusaklar/${member.id}`}
-              className="rounded-sm border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+              className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow sm:min-h-8"
             >
               Müfredat & terfi
             </Link>
@@ -517,7 +518,7 @@ export default async function StaffMemberDetailPage({
                       >
                         <button
                           type="submit"
-                          className="rounded-sm border border-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-yellow transition-colors hover:bg-brand-yellow hover:text-brand-black"
+                          className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-yellow transition-colors hover:bg-brand-yellow hover:text-brand-black sm:min-h-8"
                         >
                           İncelendi İşaretle
                         </button>

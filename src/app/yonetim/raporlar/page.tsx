@@ -14,17 +14,17 @@ import {
   Pill,
   StatCard,
 } from "@/components/panel/ui";
+import {
+  activeChipClass,
+  rowNameLinkClass,
+  secondaryButtonClass,
+} from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Raporlar — BlackBox Yönetim" };
 
 export const dynamic = "force-dynamic";
 
 const RANGES = [7, 30, 90] as const;
-
-const linkClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
-const activeLinkClass =
-  "rounded-sm bg-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-black";
 
 /** Yatay çubuk — grafik kütüphanesi yok, oran okunacak kadar basit. */
 function Bar({
@@ -98,7 +98,7 @@ export default async function AdminReportsPage({
             <Link
               key={range}
               href={`/yonetim/raporlar?gun=${range}`}
-              className={range === days ? activeLinkClass : linkClass}
+              className={range === days ? activeChipClass : secondaryButtonClass}
             >
               {range} gün
             </Link>
@@ -175,7 +175,7 @@ export default async function AdminReportsPage({
       <PanelCard
         title="Üyelik Dökümü"
         action={
-          <Link href="/personel/uyelikler" className={linkClass}>
+          <Link href="/personel/uyelikler" className={secondaryButtonClass}>
             Üyelikleri Yönet
           </Link>
         }
@@ -225,7 +225,7 @@ export default async function AdminReportsPage({
               >
                 <Link
                   href={`/personel/uyeler/${row.id}/analiz`}
-                  className="text-sm font-semibold text-brand-white transition-colors hover:text-brand-yellow"
+                  className={rowNameLinkClass}
                 >
                   {row.fullName}
                   <span className="ml-2 text-xs text-brand-muted">

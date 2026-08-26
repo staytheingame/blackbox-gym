@@ -18,6 +18,7 @@ import {
   StatCard,
 } from "@/components/panel/ui";
 import { cancelBookingAction } from "../program/actions";
+import { primaryButtonClass } from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Derslerim — BlackBox Panel" };
 
@@ -56,7 +57,7 @@ export default async function MemberBookingsPage() {
       action={
         <Link
           href="/uye/program"
-          className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white"
+          className={primaryButtonClass}
         >
           Boş Saatler
         </Link>
@@ -130,7 +131,7 @@ export default async function MemberBookingsPage() {
                       >
                         <button
                           type="submit"
-                          className="rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-red-400 hover:text-red-300"
+                          className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-red-400 hover:text-red-300 sm:min-h-8"
                         >
                           İptal Et
                         </button>

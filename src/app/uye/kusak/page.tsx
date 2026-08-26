@@ -134,7 +134,7 @@ export default async function MemberRankPage() {
                       {technique && (
                         <Link
                           href="/uye/teknikler"
-                          className="ml-2 text-xs text-brand-yellow underline"
+                          className="ml-2 inline-block py-2 text-xs text-brand-yellow underline sm:py-0"
                         >
                           {technique.name} çalış
                         </Link>

@@ -2,12 +2,13 @@
 
 import { useActionState } from "react";
 import { awardRankAction, type RankActionState } from "../actions";
+import {
+  inputClass,
+  labelClass,
+  primaryButtonClass,
+} from "@/components/panel/form";
 
 const initial: RankActionState = {};
-
-const inputClass =
-  "mt-1 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow";
-const labelClass = "text-xs font-bold uppercase tracking-wide text-brand-muted";
 
 /**
  * Terfi düğmesi. Koşullar tamamlanmamışsa da terfi verilebilir — antrenör
@@ -59,7 +60,7 @@ export function AwardRankForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white disabled:opacity-60"
+        className={primaryButtonClass}
       >
         {/* Kuşak adları zaten "… Kuşak" ile bitiyor — etiketi tekrarlama. */}
         {pending ? "Veriliyor…" : `${rankName} ver`}

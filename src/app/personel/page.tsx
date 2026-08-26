@@ -18,6 +18,10 @@ import {
   Pill,
   StatCard,
 } from "@/components/panel/ui";
+import {
+  headerLinkClass,
+  primaryButtonClass,
+} from "@/components/panel/form";
 
 export const metadata: Metadata = {
   title: "Genel Bakış — BlackBox Panel",
@@ -54,7 +58,7 @@ export default async function StaffOverviewPage() {
       action={
         <Link
           href="/personel/uyeler"
-          className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white"
+          className={primaryButtonClass}
         >
           Yeni Üye Ekle
         </Link>
@@ -119,7 +123,7 @@ export default async function StaffOverviewPage() {
         action={
           <Link
             href="/personel/program"
-            className="text-xs font-bold uppercase tracking-wide text-brand-yellow hover:text-brand-white"
+            className={headerLinkClass}
           >
             Program
           </Link>
@@ -162,7 +166,7 @@ export default async function StaffOverviewPage() {
         action={
           <Link
             href="/personel/check-inler"
-            className="text-xs font-bold uppercase tracking-wide text-brand-yellow hover:text-brand-white"
+            className={headerLinkClass}
           >
             Tümü
           </Link>

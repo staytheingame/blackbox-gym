@@ -24,13 +24,11 @@ import {
   StatCard,
 } from "@/components/panel/ui";
 import { PeriodNav, ShareBar, resolvePeriod } from "@/components/panel/PeriodNav";
+import { secondaryButtonClass } from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Kasa — BlackBox Yönetim" };
 
 export const dynamic = "force-dynamic";
-
-const linkClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 /**
  * Salon kasası — gelir, gider, kâr. Dönem seçicisi günlük/haftalık/aylık
@@ -75,13 +73,13 @@ export default async function AdminLedgerPage({
       description="Salonun parası: tahsilat, gider ve kâr. Antrenörler bu ekranı görmez — kendi panellerinde yalnız kendi sporcularının ödemesi ve kendi hakedişi görünür."
       action={
         <div className="flex flex-wrap gap-2">
-          <Link href="/yonetim/muhasebe/tahsilat" className={linkClass}>
+          <Link href="/yonetim/muhasebe/tahsilat" className={secondaryButtonClass}>
             Tahsilat
           </Link>
-          <Link href="/yonetim/muhasebe/giderler" className={linkClass}>
+          <Link href="/yonetim/muhasebe/giderler" className={secondaryButtonClass}>
             Giderler
           </Link>
-          <Link href="/yonetim/muhasebe/hakedis" className={linkClass}>
+          <Link href="/yonetim/muhasebe/hakedis" className={secondaryButtonClass}>
             Hakediş
           </Link>
         </div>
@@ -126,7 +124,7 @@ export default async function AdminLedgerPage({
               henüz ödenmedi. Ödendiğinde gidere yazılır — kasa parayı çıktığı
               gün görür.
             </p>
-            <Link href="/yonetim/muhasebe/hakedis" className={linkClass}>
+            <Link href="/yonetim/muhasebe/hakedis" className={secondaryButtonClass}>
               Hakedişe Git
             </Link>
           </div>

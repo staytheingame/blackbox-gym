@@ -14,7 +14,7 @@ import {
  */
 
 const ghostButton =
-  "rounded-sm border border-brand-border px-2.5 py-1 text-xs font-semibold text-brand-muted transition-colors hover:border-red-400/60 hover:text-red-300 disabled:opacity-50";
+  "inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-2.5 py-1 text-xs font-semibold text-brand-muted transition-colors hover:border-red-400/60 hover:text-red-300 disabled:opacity-50 sm:min-h-7";
 
 export function DeleteRequirementButton({
   requirementId,

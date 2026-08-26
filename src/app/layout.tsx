@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Oswald } from "next/font/google";
 import "./globals.css";
 
@@ -17,6 +17,17 @@ export const metadata: Metadata = {
   title: "BlackBox — Box & Fight Gym",
   description:
     "BlackBox, boks ve fight sporlarına odaklanan salon. Üyelik planları, antrenman programları, ekipman ve ders takvimi.",
+};
+
+/**
+ * Uygulama baştan sona siyah; `themeColor` olmadan Android Chrome'un adres
+ * çubuğu açık renkte kalıyor ve panel telefonda iki parçalı görünüyor.
+ * `colorScheme: "dark"` ise tarayıcının kendi form denetimlerini (tarih
+ * seçici, `<select>` açılır listesi) koyu paletle çizdirir.
+ */
+export const viewport: Viewport = {
+  themeColor: "#000000",
+  colorScheme: "dark",
 };
 
 /**

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABEL } from "@/domain/finance/ledger";
 import { formatMinorTR } from "@/domain/finance/money";
 import type { FinanceState } from "./actions";
+import { inputClass, labelClass } from "@/components/panel/form";
 
 const initialState: FinanceState = {};
 
@@ -80,7 +81,3 @@ export function PayoutForm({
   );
 }
 
-const inputClass =
-  "mt-1 rounded-sm border border-brand-border bg-brand-black px-2 py-1.5 text-xs text-brand-white outline-none focus:border-brand-yellow";
-const labelClass =
-  "text-[0.65rem] font-bold uppercase tracking-wide text-brand-muted";

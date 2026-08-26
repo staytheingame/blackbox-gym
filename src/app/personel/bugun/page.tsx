@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, requireStaff } from "@/lib/auth/guards";
+import { isOrganizationWide, staffScopeFor } from "@/lib/auth/scope";
 import { getDayView, type DayRosterMember } from "@/lib/queries/today";
 import { SLOT_KIND_LABEL } from "@/lib/queries/slots";
 import { BOOKING_STATUS_LABEL } from "@/domain/booking/credits";
@@ -19,16 +20,16 @@ import {
   markAttendanceAction,
 } from "../program/actions";
 import { RemindButton } from "./RemindButton";
+import {
+  rowButtonClass,
+  rowNameLinkClass,
+  rowPrimaryButtonClass,
+} from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Bugün — BlackBox Panel" };
 
 /** Yoklama ve rezervasyon her an değişir; sayfa istekte hesaplanır. */
 export const dynamic = "force-dynamic";
-
-const smallButton =
-  "rounded-sm border border-brand-border px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
-const primaryButton =
-  "rounded-sm bg-brand-yellow px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white";
 
 function shiftDateKey(dateKey: string, days: number): string {
   const [year, month, day] = dateKey.split("-").map(Number);
@@ -50,11 +51,11 @@ function MemberRow({
     row.membershipDaysLeft !== null && row.membershipDaysLeft <= 14;
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-2 py-2.5 first:pt-0 last:pb-0">
+    <li className="flex flex-col gap-2 py-2.5 first:pt-0 last:pb-0 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="min-w-0">
         <Link
           href={`/personel/uyeler/${row.memberId}`}
-          className="text-sm font-semibold text-brand-white transition-colors hover:text-brand-yellow"
+          className={rowNameLinkClass}
         >
           {row.fullName}
         </Link>
@@ -79,6 +80,9 @@ function MemberRow({
         </div>
       </div>
 
+      {/* Yoklama telefondan, ayakta, tek elle alınıyor: mobilde "Geldi" ve
+          "Gelmedi" satırın altına yarım genişlikte serilir — yan yana duran
+          iki dar hedef olarak değil. */}
       <div className="flex flex-wrap items-center gap-2">
         {row.status === "katildi" && <Pill tone="yellow">Geldi</Pill>}
         {row.status === "gelmedi" && <Pill tone="danger">Gelmedi</Pill>}
@@ -96,21 +100,26 @@ function MemberRow({
         )}
 
         {(row.status === "onayli" || slotPast) && (
-          <>
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
             <form action={markAttendanceAction.bind(null, row.bookingId, true)}>
               <button
                 type="submit"
-                className={row.status === "katildi" ? smallButton : primaryButton}
+                aria-label={`${row.fullName} geldi olarak işaretle`}
+                className={`w-full ${row.status === "katildi" ? rowButtonClass : rowPrimaryButtonClass}`}
               >
                 Geldi
               </button>
             </form>
             <form action={markAttendanceAction.bind(null, row.bookingId, false)}>
-              <button type="submit" className={smallButton}>
+              <button
+                type="submit"
+                aria-label={`${row.fullName} gelmedi olarak işaretle`}
+                className={`w-full ${rowButtonClass}`}
+              >
                 Gelmedi
               </button>
             </form>
-          </>
+          </div>
         )}
       </div>
     </li>
@@ -127,10 +136,12 @@ export default async function StaffTodayPage({
   const user = await getCurrentUser();
   if (!user) redirect("/giris");
   const membership = await requireStaff(user.id);
+  // Antrenör kendi açtığı seansları görür, yönetici salonun tamamını.
+  const scope = staffScopeFor(membership, user.id);
 
   const todayKey = toGymDateKey(new Date());
   const dateKey = /^\d{4}-\d{2}-\d{2}$/.test(gun ?? "") ? gun! : todayKey;
-  const day = await getDayView(membership.organizationId, dateKey);
+  const day = await getDayView(scope, dateKey);
 
   const dayDate = new Date(`${dateKey}T12:00:00.000Z`);
   const isToday = dateKey === todayKey;
@@ -138,23 +149,27 @@ export default async function StaffTodayPage({
   return (
     <PanelPage
       title={isToday ? "Bugün" : formatDayTR(dayDate)}
-      description="Günün seansları, kimin geldiği ve kimin hatırlatılması gerektiği. Yoklama buradan tek dokunuşla alınır."
+      description={
+        isOrganizationWide(scope)
+          ? "Salonun o günkü tüm seansları, kimin geldiği ve kimin hatırlatılması gerektiği. Yoklama buradan tek dokunuşla alınır."
+          : "Senin o günkü derslerin: saati, kimin geleceği ve kimin hatırlatılması gerektiği. Yoklama buradan tek dokunuşla alınır."
+      }
       action={
         <div className="flex items-center gap-2">
           <Link
             href={`/personel/bugun?gun=${shiftDateKey(dateKey, -1)}`}
-            className={smallButton}
+            className={rowButtonClass}
           >
             ← Önceki
           </Link>
           {!isToday && (
-            <Link href="/personel/bugun" className={smallButton}>
+            <Link href="/personel/bugun" className={rowButtonClass}>
               Bugün
             </Link>
           )}
           <Link
             href={`/personel/bugun?gun=${shiftDateKey(dateKey, 1)}`}
-            className={smallButton}
+            className={rowButtonClass}
           >
             Sonraki →
           </Link>
@@ -255,7 +270,7 @@ export default async function StaffTodayPage({
                         <form
                           action={approveRequestAction.bind(null, row.bookingId)}
                         >
-                          <button type="submit" className={primaryButton}>
+                          <button type="submit" className={rowPrimaryButtonClass}>
                             Onayla
                           </button>
                         </form>
@@ -270,7 +285,7 @@ export default async function StaffTodayPage({
                   action={closeSlotAction.bind(null, slot.id)}
                   className="mt-4"
                 >
-                  <button type="submit" className={smallButton}>
+                  <button type="submit" className={rowButtonClass}>
                     Seansı Kapat
                   </button>
                 </form>

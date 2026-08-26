@@ -4,6 +4,12 @@ import { useActionState, useMemo, useState } from "react";
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABEL } from "@/domain/finance/ledger";
 import { formatMinorTR } from "@/domain/finance/money";
 import type { FinanceState } from "./actions";
+import {
+  hintClass,
+  inputClass,
+  labelClass,
+  primaryButtonClass,
+} from "@/components/panel/form";
 
 const initialState: FinanceState = {};
 
@@ -158,7 +164,7 @@ export function PaymentForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white disabled:opacity-60"
+        className={primaryButtonClass}
       >
         {pending ? "Kaydediliyor…" : "Tahsilatı Kaydet"}
       </button>
@@ -166,7 +172,3 @@ export function PaymentForm({
   );
 }
 
-const inputClass =
-  "mt-1 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow disabled:opacity-50";
-const labelClass = "text-xs font-bold uppercase tracking-wide text-brand-muted";
-const hintClass = "mt-1 text-[0.7rem] text-brand-muted";

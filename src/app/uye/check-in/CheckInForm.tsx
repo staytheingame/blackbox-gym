@@ -2,6 +2,7 @@
 
 import { useActionState, type ReactNode } from "react";
 import { checkInAction, type CheckInState } from "./actions";
+import { inputClass } from "@/components/panel/form";
 
 const initialState: CheckInState = {};
 
@@ -104,9 +105,6 @@ export function CheckInForm() {
     </form>
   );
 }
-
-const inputClass =
-  "mt-1 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow";
 
 function Field({
   label,

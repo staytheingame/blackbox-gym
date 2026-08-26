@@ -9,6 +9,7 @@ import { ORG_ROLE_LABEL } from "@/lib/auth/roles";
 import { formatDateTR } from "@/lib/date";
 import { logoutAction } from "@/lib/auth/actions";
 import { PanelCard, PanelPage, Pill, Scaffold } from "@/components/panel/ui";
+import { PasswordChangeForm } from "@/components/panel/PasswordChangeForm";
 
 export const metadata: Metadata = { title: "Profil — BlackBox Panel" };
 
@@ -38,7 +39,7 @@ export default async function MemberProfilePage() {
         <form action={logoutAction}>
           <button
             type="submit"
-            className="rounded-sm border border-brand-border px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-red-400/50 hover:text-red-400"
+            className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-red-400/50 hover:text-red-400 sm:min-h-9"
           >
             Çıkış Yap
           </button>
@@ -68,18 +69,23 @@ export default async function MemberProfilePage() {
         </dl>
       </PanelCard>
 
+      <PanelCard
+        title="Şifre Değiştir"
+        description="Panele girdiğin şifre. Davet bağlantısıyla kurduğun şifreyi buradan yenileyebilirsin."
+      >
+        <PasswordChangeForm />
+      </PanelCard>
+
       <Scaffold
         mirrors="Kong Academy → Danışan / Profil (settings)"
-        summary="Bilgiler şu an yalnız okunur; düzenleme ve şifre değiştirme akışı henüz yok — üyeler personel tarafından geçici şifreyle oluşturuluyor."
+        summary="Şifre değiştirme çalışıyor; iletişim bilgisi ve sporcu bilgileri şu an yalnız okunur — düzenlemeyi antrenör yapıyor."
         features={[
           "İletişim bilgisi güncelleme",
-          "Şifre değiştirme (ilk girişte zorunlu)",
           "Bildirim tercihleri",
           "Sıklet / boy gibi sporcu bilgileri",
         ]}
         needs={[
           "Profil güncelleme server action + zod şeması",
-          "Şifre değiştirme akışı (bcrypt yeniden hash)",
           "Zorunlu ilk şifre değişimi bayrağı (`User.mustChangePassword`)",
         ]}
       />

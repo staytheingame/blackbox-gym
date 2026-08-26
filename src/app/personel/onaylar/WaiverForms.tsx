@@ -8,14 +8,14 @@ import {
   updateWaiverTemplateAction,
   type WaiverTemplateState,
 } from "./actions";
+import {
+  inputClass,
+  labelClass,
+  primaryButtonClass,
+} from "@/components/panel/form";
 
-const inputClass =
-  "mt-1 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow";
-const labelClass = "text-xs font-bold uppercase tracking-wide text-brand-muted";
-const buttonClass =
-  "rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white disabled:opacity-60";
 const ghostButton =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow disabled:opacity-50";
+  "inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow disabled:opacity-50 sm:min-h-8";
 
 const initial: WaiverTemplateState = {};
 
@@ -141,7 +141,7 @@ export function CreateWaiverForm() {
 
       <Feedback state={state} />
 
-      <button type="submit" disabled={pending} className={buttonClass}>
+      <button type="submit" disabled={pending} className={primaryButtonClass}>
         {pending ? "Kaydediliyor…" : "Formu Ekle"}
       </button>
     </form>
@@ -233,7 +233,7 @@ export function EditWaiverForm({
       <Feedback state={state} />
 
       <div className="flex gap-2">
-        <button type="submit" disabled={pending} className={buttonClass}>
+        <button type="submit" disabled={pending} className={primaryButtonClass}>
           {pending ? "Kaydediliyor…" : "Kaydet"}
         </button>
         <button

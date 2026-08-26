@@ -6,12 +6,13 @@ import {
   addMealAction,
   type PlanFormState,
 } from "../actions";
+import {
+  inputClass,
+  labelClass,
+  primaryButtonClass,
+} from "@/components/panel/form";
 
 const initialState: PlanFormState = {};
-
-const inputClass =
-  "w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow";
-const labelClass = "text-xs font-bold uppercase tracking-wide text-brand-muted";
 
 export function AddMealForm({ planId }: { planId: string }) {
   const [state, formAction, pending] = useActionState(
@@ -61,7 +62,7 @@ export function AddMealForm({ planId }: { planId: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black hover:bg-brand-white disabled:opacity-60"
+        className={primaryButtonClass}
       >
         {pending ? "Ekleniyor…" : "Öğün Ekle"}
       </button>
@@ -169,7 +170,7 @@ export function AddFoodForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow disabled:opacity-60"
+        className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow disabled:opacity-60 sm:min-h-8"
       >
         {pending ? "Ekleniyor…" : "Besin Ekle"}
       </button>

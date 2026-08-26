@@ -12,6 +12,7 @@ import {
   Pill,
   StatCard,
 } from "@/components/panel/ui";
+import { primaryButtonClass } from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Üyeliğim — BlackBox Panel" };
 
@@ -45,7 +46,7 @@ export default async function MemberMembershipPage() {
       action={
         <Link
           href="/uye/program"
-          className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white"
+          className={primaryButtonClass}
         >
           Ders Al
         </Link>

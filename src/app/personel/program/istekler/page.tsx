@@ -15,6 +15,7 @@ import {
   Pill,
 } from "@/components/panel/ui";
 import { approveRequestAction, rejectRequestAction } from "../actions";
+import { rowNameLinkClass } from "@/components/panel/form";
 
 export const metadata: Metadata = {
   title: "Katılım İstekleri — BlackBox Panel",
@@ -49,7 +50,7 @@ export default async function StaffRequestsPage() {
                 <div>
                   <Link
                     href={`/personel/uyeler/${request.memberId}`}
-                    className="text-sm font-semibold text-brand-white transition-colors hover:text-brand-yellow"
+                    className={rowNameLinkClass}
                   >
                     {request.memberName}
                     <span className="ml-2 text-xs text-brand-muted">
@@ -82,7 +83,7 @@ export default async function StaffRequestsPage() {
                   >
                     <button
                       type="submit"
-                      className="rounded-sm border border-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-yellow transition-colors hover:bg-brand-yellow hover:text-brand-black"
+                      className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-yellow transition-colors hover:bg-brand-yellow hover:text-brand-black sm:min-h-8"
                     >
                       Onayla
                     </button>
@@ -92,7 +93,7 @@ export default async function StaffRequestsPage() {
                   >
                     <button
                       type="submit"
-                      className="rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-red-400 hover:text-red-300"
+                      className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-red-400 hover:text-red-300 sm:min-h-8"
                     >
                       Reddet
                     </button>

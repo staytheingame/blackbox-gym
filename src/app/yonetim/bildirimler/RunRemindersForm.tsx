@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { runRemindersAction, type RunState } from "./actions";
+import { primaryButtonClass } from "@/components/panel/form";
 
 const initialState: RunState = {};
 
@@ -16,7 +17,7 @@ export function RunRemindersForm() {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black hover:bg-brand-white disabled:opacity-60"
+        className={primaryButtonClass}
       >
         {pending ? "Çalışıyor…" : "Hatırlatmaları Şimdi Çalıştır"}
       </button>

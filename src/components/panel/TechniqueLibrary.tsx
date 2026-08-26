@@ -45,7 +45,7 @@ export function TechniqueLibrary({
               key={item}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={`rounded-sm border px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors ${
+              className={`inline-flex min-h-11 items-center justify-center rounded-sm border px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors sm:min-h-8 ${
                 active
                   ? "border-brand-yellow bg-brand-yellow text-brand-black"
                   : "border-brand-border text-brand-muted hover:border-brand-yellow/40 hover:text-brand-white"

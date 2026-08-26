@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { slotWhere, type StaffScope } from "@/lib/auth/scope";
 import { gymDateTimeToInstant, toGymDateKey } from "@/lib/date";
 import { summarizeCredits, type BookingStatus } from "@/domain/booking/credits";
 
@@ -62,11 +63,17 @@ export type DayView = {
 const SEAT_STATUSES = ["onayli", "katildi", "gelmedi"];
 
 /**
- * Salon saatiyle bir günün tüm seansları ve katılımcıları.
+ * Salon saatiyle bir günün seansları ve katılımcıları.
  * `dateKey` verilmezse bugün.
+ *
+ * KAPSAM: antrenör YALNIZ kendi açtığı seansları görür (`slotWhere`), yönetici
+ * salonun tamamını. Burası daha önce düz `organizationId` ile sorguluyordu;
+ * iki antrenörlü bir salonda herkes ötekinin gününü görüyor ve — daha kötüsü —
+ * başkasının sporcusunun yoklamasını alabiliyordu. Ders saatleri sporcu
+ * kapsamından ayrı bir eksendir; ayrımın gerekçesi `scope.ts` içinde.
  */
 export async function getDayView(
-  organizationId: string,
+  scope: StaffScope,
   dateKey?: string,
 ): Promise<DayView> {
   const now = new Date();
@@ -75,7 +82,7 @@ export async function getDayView(
   const to = new Date(from.getTime() + MS_PER_DAY);
 
   const slots = await prisma.trainingSlot.findMany({
-    where: { organizationId, startsAt: { gte: from, lt: to } },
+    where: slotWhere(scope, { startsAt: { gte: from, lt: to } }),
     orderBy: { startsAt: "asc" },
     include: {
       bookings: {

@@ -156,7 +156,7 @@ export function FightAnalysisTool() {
             type="file"
             accept="video/*"
             onChange={handleFileChange}
-            className="mt-2 block w-full text-sm text-brand-white file:mr-4 file:rounded-sm file:border-0 file:bg-brand-yellow file:px-4 file:py-2 file:text-xs file:font-bold file:uppercase file:tracking-wide file:text-brand-black hover:file:bg-brand-white"
+            className="mt-2 block w-full text-base text-brand-white file:mr-4 file:rounded-sm file:border-0 file:bg-brand-yellow file:px-4 file:py-2 file:text-xs file:font-bold file:uppercase file:tracking-wide file:text-brand-black hover:file:bg-brand-white sm:text-sm"
           />
           <p className="mt-2 text-xs text-brand-muted">
             Kısa bir klip öner (30 sn - 2 dk). Video hiçbir sunucuya

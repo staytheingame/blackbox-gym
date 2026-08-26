@@ -97,7 +97,7 @@ export function SoundControls({
             setPreferredVoiceURI(event.target.value || null);
             speak("Komut sesi seçildi");
           }}
-          className="rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-xs text-zinc-200"
+          className="rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-base text-zinc-200 sm:text-xs"
         >
           <option value="">Otomatik (Türkçe, erkek öncelikli)</option>
           {sortVoicesForPicker(voices).map((voice) => (

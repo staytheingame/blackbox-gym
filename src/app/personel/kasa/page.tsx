@@ -26,13 +26,14 @@ import {
 import { PeriodNav, resolvePeriod } from "@/components/panel/PeriodNav";
 import { PaymentForm } from "@/app/yonetim/muhasebe/PaymentForm";
 import { recordOwnMemberPaymentAction } from "./actions";
+import {
+  rowNameLinkClass,
+  secondaryButtonClass,
+} from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Kasam — BlackBox Panel" };
 
 export const dynamic = "force-dynamic";
-
-const linkClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 /**
  * Antrenörün kendi mali ekranı (kullanıcı kararı): **kendi hakedişi + kendi
@@ -74,7 +75,7 @@ export default async function StaffLedgerPage({
       }
       action={
         isOrganizationWide(scope) ? (
-          <Link href="/yonetim/muhasebe" className={linkClass}>
+          <Link href="/yonetim/muhasebe" className={secondaryButtonClass}>
             Salon Kasası →
           </Link>
         ) : null
@@ -157,7 +158,7 @@ export default async function StaffLedgerPage({
               >
                 <Link
                   href={`/personel/uyeler/${row.memberId}`}
-                  className="text-sm font-semibold text-brand-white transition-colors hover:text-brand-yellow"
+                  className={rowNameLinkClass}
                 >
                   {row.memberName}
                   <span className="ml-2 text-xs text-brand-muted">

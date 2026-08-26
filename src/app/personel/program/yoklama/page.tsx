@@ -18,11 +18,12 @@ import {
   Pill,
 } from "@/components/panel/ui";
 import { closeSlotAction, markAttendanceAction } from "../actions";
+import {
+  rowNameLinkClass,
+  secondaryButtonClass,
+} from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Yoklama — BlackBox Panel" };
-
-const buttonClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 export default async function StaffAttendancePage() {
   const user = await getCurrentUser();
@@ -62,7 +63,7 @@ export default async function StaffAttendancePage() {
                     </div>
                     {undecided.length === 0 && (
                       <form action={closeSlotAction.bind(null, slot.id)}>
-                        <button type="submit" className={buttonClass}>
+                        <button type="submit" className={secondaryButtonClass}>
                           Seansı Kapat
                         </button>
                       </form>
@@ -77,7 +78,7 @@ export default async function StaffAttendancePage() {
                       >
                         <Link
                           href={`/personel/uyeler/${seat.memberId}`}
-                          className="text-sm text-brand-white transition-colors hover:text-brand-yellow"
+                          className={rowNameLinkClass}
                         >
                           {seat.memberName}
                           <span className="ml-2 text-xs text-brand-muted">
@@ -85,37 +86,43 @@ export default async function StaffAttendancePage() {
                           </span>
                         </Link>
 
-                        <div className="flex flex-wrap items-center gap-2">
+                        {/* `/personel/bugun` ile aynı kural: yoklama telefondan
+                            alınıyor, iki seçenek mobilde yarım genişlik. */}
+                        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                           {seat.status === "katildi" && <Pill tone="yellow">Katıldı</Pill>}
                           {seat.status === "gelmedi" && <Pill tone="danger">Gelmedi</Pill>}
-                          <form
-                            action={markAttendanceAction.bind(
-                              null,
-                              seat.bookingId,
-                              true,
-                            )}
-                          >
-                            <button
-                              type="submit"
-                              className="rounded-sm border border-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-yellow transition-colors hover:bg-brand-yellow hover:text-brand-black"
+                          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+                            <form
+                              action={markAttendanceAction.bind(
+                                null,
+                                seat.bookingId,
+                                true,
+                              )}
                             >
-                              Geldi
-                            </button>
-                          </form>
-                          <form
-                            action={markAttendanceAction.bind(
-                              null,
-                              seat.bookingId,
-                              false,
-                            )}
-                          >
-                            <button
-                              type="submit"
-                              className="rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-red-400 hover:text-red-300"
+                              <button
+                                type="submit"
+                                aria-label={`${seat.memberName} geldi olarak işaretle`}
+                                className="inline-flex min-h-11 w-full items-center justify-center rounded-sm border border-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-yellow transition-colors hover:bg-brand-yellow hover:text-brand-black sm:min-h-8"
+                              >
+                                Geldi
+                              </button>
+                            </form>
+                            <form
+                              action={markAttendanceAction.bind(
+                                null,
+                                seat.bookingId,
+                                false,
+                              )}
                             >
-                              Gelmedi
-                            </button>
-                          </form>
+                              <button
+                                type="submit"
+                                aria-label={`${seat.memberName} gelmedi olarak işaretle`}
+                                className="inline-flex min-h-11 w-full items-center justify-center rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-red-400 hover:text-red-300 sm:min-h-8"
+                              >
+                                Gelmedi
+                              </button>
+                            </form>
+                          </div>
                         </div>
                       </li>
                     ))}

@@ -64,21 +64,21 @@ export function InviteLinkBox({
         readOnly
         value={url}
         onFocus={(event) => event.currentTarget.select()}
-        className="mt-3 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 font-mono text-xs text-brand-white outline-none"
+        className="mt-3 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 font-mono text-base text-brand-white outline-none sm:text-xs"
       />
 
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => copy(url)}
-          className="rounded-sm bg-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white"
+          className="inline-flex min-h-11 items-center justify-center rounded-sm bg-brand-yellow px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white sm:min-h-8"
         >
           {copied ? "Kopyalandı" : "Bağlantıyı Kopyala"}
         </button>
         <button
           type="button"
           onClick={() => copy(message)}
-          className="rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-white transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+          className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-white transition-colors hover:border-brand-yellow hover:text-brand-yellow sm:min-h-8"
         >
           Hazır Mesajı Kopyala
         </button>
@@ -86,7 +86,7 @@ export function InviteLinkBox({
           href={`https://wa.me/?text=${encodeURIComponent(message)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-white transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+          className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-white transition-colors hover:border-brand-yellow hover:text-brand-yellow sm:min-h-8"
         >
           WhatsApp&apos;ta Aç
         </a>

@@ -5,6 +5,10 @@ import {
   logTrainingForMemberAction,
   type StaffTrainingLogState,
 } from "./actions";
+import {
+  inputClass,
+  primaryButtonClass,
+} from "@/components/panel/form";
 
 const initialState: StaffTrainingLogState = {};
 
@@ -92,7 +96,7 @@ export function StaffTrainingLogForm({ memberId }: { memberId: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black hover:bg-brand-white disabled:opacity-60"
+        className={primaryButtonClass}
       >
         {pending ? "Kaydediliyor…" : "Antrenmanı Logla"}
       </button>
@@ -100,5 +104,3 @@ export function StaffTrainingLogForm({ memberId }: { memberId: string }) {
   );
 }
 
-const inputClass =
-  "mt-1 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow";

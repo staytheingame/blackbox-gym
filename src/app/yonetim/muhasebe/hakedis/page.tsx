@@ -21,13 +21,11 @@ import {
 import { PeriodNav, resolvePeriod } from "@/components/panel/PeriodNav";
 import { PayoutForm } from "../PayoutForm";
 import { accrueSalariesAction, payCoachAction } from "../actions";
+import { secondaryButtonClass } from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Hakediş — BlackBox Yönetim" };
 
 export const dynamic = "force-dynamic";
-
-const linkClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 /**
  * Antrenör hakedişi: dönemde kim ne kadar hak etti, kaç ders verdi, aylık
@@ -70,11 +68,11 @@ export default async function AdminEarningsPage({
       action={
         <div className="flex flex-wrap gap-2">
           <form action={accrueSalariesAction}>
-            <button type="submit" className={linkClass}>
+            <button type="submit" className={secondaryButtonClass}>
               Maaşları İşle
             </button>
           </form>
-          <Link href="/yonetim/muhasebe" className={linkClass}>
+          <Link href="/yonetim/muhasebe" className={secondaryButtonClass}>
             ← Kasa
           </Link>
         </div>

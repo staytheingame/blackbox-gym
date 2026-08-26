@@ -32,11 +32,9 @@ import {
   moveItemAction,
   setTemplateActiveAction,
 } from "../actions";
+import { rowButtonClass } from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Şablon — BlackBox Panel" };
-
-const smallButton =
-  "rounded-sm border border-brand-border px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 export default async function StaffPlanTemplatePage({
   params,
@@ -85,7 +83,7 @@ export default async function StaffPlanTemplatePage({
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/personel/planlar?tur=${template.kind}`}
-            className={smallButton}
+            className={rowButtonClass}
           >
             ← Şablonlar
           </Link>
@@ -96,7 +94,7 @@ export default async function StaffPlanTemplatePage({
               !template.isActive,
             )}
           >
-            <button type="submit" className={smallButton}>
+            <button type="submit" className={rowButtonClass}>
               {template.isActive ? "Yayından Kaldır" : "Yayına Al"}
             </button>
           </form>
@@ -187,7 +185,7 @@ export default async function StaffPlanTemplatePage({
                     </p>
                   </div>
                   <form action={deleteDayAction.bind(null, day.id, template.id)}>
-                    <button type="submit" className={smallButton}>
+                    <button type="submit" className={rowButtonClass}>
                       Günü Sil
                     </button>
                   </form>
@@ -234,7 +232,7 @@ export default async function StaffPlanTemplatePage({
                                 <button
                                   type="submit"
                                   title="Yukarı taşı"
-                                  className={smallButton}
+                                  className={rowButtonClass}
                                 >
                                   ↑
                                 </button>
@@ -252,7 +250,7 @@ export default async function StaffPlanTemplatePage({
                                 <button
                                   type="submit"
                                   title="Aşağı taşı"
-                                  className={smallButton}
+                                  className={rowButtonClass}
                                 >
                                   ↓
                                 </button>
@@ -265,7 +263,7 @@ export default async function StaffPlanTemplatePage({
                                 template.id,
                               )}
                             >
-                              <button type="submit" className={smallButton}>
+                              <button type="submit" className={rowButtonClass}>
                                 Sil
                               </button>
                             </form>

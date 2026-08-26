@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatDateTR } from "@/lib/date";
+import { secondaryButtonClass } from "./form";
 
 /**
  * Hafta ileri/geri şeridi. Hafta `?hafta=` sorgusuyla taşınır (0 = bu hafta),
@@ -19,12 +20,13 @@ export function WeekNav({
   const link = (value: number) =>
     value === 0 ? basePath : `${basePath}?hafta=${value}`;
 
-  const buttonClass =
-    "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
-
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Link href={link(offset - 1)} className={buttonClass}>
+      <Link
+        href={link(offset - 1)}
+        aria-label="Önceki hafta"
+        className={secondaryButtonClass}
+      >
         ← Önceki
       </Link>
       <span className="text-xs text-brand-muted">
@@ -33,11 +35,15 @@ export function WeekNav({
           <span className="ml-2 text-brand-yellow">bu hafta</span>
         )}
       </span>
-      <Link href={link(offset + 1)} className={buttonClass}>
+      <Link
+        href={link(offset + 1)}
+        aria-label="Sonraki hafta"
+        className={secondaryButtonClass}
+      >
         Sonraki →
       </Link>
       {offset !== 0 && (
-        <Link href={basePath} className={buttonClass}>
+        <Link href={basePath} className={secondaryButtonClass}>
           Bu hafta
         </Link>
       )}

@@ -16,6 +16,12 @@ import {
   type DayType,
   type NutritionStatus,
 } from "@/domain/nutrition/plan";
+import {
+  hintClass,
+  inputClass,
+  labelClass,
+  primaryButtonClass,
+} from "@/components/panel/form";
 
 const initialState: PlanFormState = {};
 
@@ -233,7 +239,7 @@ export function PlanForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black hover:bg-brand-white disabled:opacity-60"
+        className={primaryButtonClass}
       >
         {pending ? "Kaydediliyor…" : planId ? "Planı Güncelle" : "Plan Oluştur"}
       </button>
@@ -241,7 +247,3 @@ export function PlanForm({
   );
 }
 
-const inputClass =
-  "mt-1 w-full rounded-sm border border-brand-border bg-brand-black px-3 py-2 text-sm text-brand-white outline-none focus:border-brand-yellow";
-const labelClass = "text-xs font-bold uppercase tracking-wide text-brand-muted";
-const hintClass = "mt-1 text-[0.7rem] text-brand-muted";

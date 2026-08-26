@@ -7,11 +7,9 @@ import {
   revokeStaffInviteAction,
   type StaffFormState,
 } from "./actions";
+import { rowButtonClass } from "@/components/panel/form";
 
 const initialState: StaffFormState = {};
-
-const rowButton =
-  "rounded-sm border border-brand-border px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 /**
  * Bekleyen davet satırı. Bağlantı yalnız ÜRETİLDİĞİ anda gösterilir —
@@ -34,12 +32,12 @@ export function PendingInviteRow({
     <div className="mt-2 space-y-2">
       <div className="flex flex-wrap gap-2">
         <form action={formAction}>
-          <button type="submit" disabled={pending} className={rowButton}>
+          <button type="submit" disabled={pending} className={rowButtonClass}>
             {pending ? "Üretiliyor…" : "Yeni Bağlantı Üret"}
           </button>
         </form>
         <form action={revokeStaffInviteAction.bind(null, inviteId)}>
-          <button type="submit" className={rowButton}>
+          <button type="submit" className={rowButtonClass}>
             Daveti İptal Et
           </button>
         </form>

@@ -10,13 +10,11 @@ import { RADAR_BAND_LABEL } from "@/domain/analysis/member-radar";
 import { RadarList } from "@/components/panel/RadarList";
 import { PanelCard, PanelPage, StatCard } from "@/components/panel/ui";
 import { EmptyState } from "@/components/panel/ui";
+import { secondaryButtonClass } from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Yönetim — BlackBox" };
 
 export const dynamic = "force-dynamic";
-
-const linkClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 export default async function AdminOverviewPage() {
   const user = await getCurrentUser();
@@ -39,7 +37,7 @@ export default async function AdminOverviewPage() {
       title={overview.organizationName}
       description="Salonun işletme görünümü: kadro, üyelik, doluluk ve bildirim akışı. Günlük antrenör işleri antrenör panelinde."
       action={
-        <Link href="/personel" className={linkClass}>
+        <Link href="/personel" className={secondaryButtonClass}>
           Antrenör Paneli →
         </Link>
       }
@@ -96,7 +94,7 @@ export default async function AdminOverviewPage() {
         title={`${RADAR_BAND_LABEL.kritik} (${atRisk.length})`}
         description="Takip radarının kritik bandı. Puan sporcunun notu değil — bugün kimden başlanacağını söyler."
         action={
-          <Link href="/personel/icgoruler" className={linkClass}>
+          <Link href="/personel/icgoruler" className={secondaryButtonClass}>
             Takip Radarı
           </Link>
         }
@@ -109,7 +107,7 @@ export default async function AdminOverviewPage() {
         {atRisk.length > 8 && (
           <Link
             href="/personel/icgoruler?bant=kritik"
-            className="mt-4 inline-block text-xs font-bold uppercase tracking-wide text-brand-yellow hover:text-brand-white"
+            className="mt-4 inline-flex min-h-11 items-center text-xs font-bold uppercase tracking-wide text-brand-yellow hover:text-brand-white sm:min-h-0"
           >
             +{atRisk.length - 8} sporcu daha →
           </Link>
@@ -153,25 +151,25 @@ export default async function AdminOverviewPage() {
 
         <PanelCard title="Hızlı Erişim">
           <div className="flex flex-wrap gap-2">
-            <Link href="/yonetim/kadro" className={linkClass}>
+            <Link href="/yonetim/kadro" className={secondaryButtonClass}>
               Kadro
             </Link>
-            <Link href="/yonetim/kocluk" className={linkClass}>
+            <Link href="/yonetim/kocluk" className={secondaryButtonClass}>
               Koçluk ({overview.coachCount} antrenör)
             </Link>
-            <Link href="/yonetim/uyeler" className={linkClass}>
+            <Link href="/yonetim/uyeler" className={secondaryButtonClass}>
               Sporcular
             </Link>
-            <Link href="/yonetim/paketler" className={linkClass}>
+            <Link href="/yonetim/paketler" className={secondaryButtonClass}>
               Paketler ({overview.activePlanCount}/{overview.planCount})
             </Link>
-            <Link href="/yonetim/raporlar" className={linkClass}>
+            <Link href="/yonetim/raporlar" className={secondaryButtonClass}>
               Raporlar
             </Link>
-            <Link href="/yonetim/bildirimler" className={linkClass}>
+            <Link href="/yonetim/bildirimler" className={secondaryButtonClass}>
               Bildirimler
             </Link>
-            <Link href="/personel/beslenme" className={linkClass}>
+            <Link href="/personel/beslenme" className={secondaryButtonClass}>
               Beslenme ({overview.nutritionPlanCount} aktif)
             </Link>
           </div>

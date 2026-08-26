@@ -21,6 +21,11 @@ import {
 } from "@/components/panel/ui";
 import { SubscriptionForm } from "./SubscriptionForm";
 import { changeSubscriptionStatusAction, closeExpiredAction } from "./actions";
+import {
+  primaryButtonClass,
+  rowNameLinkClass,
+  secondaryButtonClass,
+} from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Üyelikler — BlackBox Panel" };
 
@@ -34,9 +39,6 @@ const STATUS_LABEL: Record<string, string> = {
   donduruldu: "Donduruldu",
   iptal: "İptal",
 };
-
-const rowButtonClass =
-  "rounded-sm border border-brand-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 export default async function StaffMembershipsPage() {
   const user = await getCurrentUser();
@@ -91,7 +93,7 @@ export default async function StaffMembershipsPage() {
           <form action={closeExpiredAction}>
             <button
               type="submit"
-              className="rounded-sm bg-brand-yellow px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-black transition-colors hover:bg-brand-white"
+              className={primaryButtonClass}
             >
               Süresi Geçenleri Kapat
             </button>
@@ -181,7 +183,7 @@ export default async function StaffMembershipsPage() {
                   <div>
                     <Link
                       href={`/personel/uyeler/${subscription.memberId}`}
-                      className="text-sm font-semibold text-brand-white transition-colors hover:text-brand-yellow"
+                      className={rowNameLinkClass}
                     >
                       {subscription.memberName}
                       <span className="ml-2 text-xs text-brand-muted">
@@ -224,7 +226,7 @@ export default async function StaffMembershipsPage() {
                             "donduruldu",
                           )}
                         >
-                          <button type="submit" className={rowButtonClass}>
+                          <button type="submit" className={secondaryButtonClass}>
                             Dondur
                           </button>
                         </form>
@@ -237,7 +239,7 @@ export default async function StaffMembershipsPage() {
                             "aktif",
                           )}
                         >
-                          <button type="submit" className={rowButtonClass}>
+                          <button type="submit" className={secondaryButtonClass}>
                             Devam Ettir
                           </button>
                         </form>
@@ -251,7 +253,7 @@ export default async function StaffMembershipsPage() {
                               "iptal",
                             )}
                           >
-                            <button type="submit" className={rowButtonClass}>
+                            <button type="submit" className={secondaryButtonClass}>
                               İptal Et
                             </button>
                           </form>

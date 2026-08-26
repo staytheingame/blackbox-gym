@@ -77,7 +77,7 @@ export default async function AdminPrivacyPage() {
               </div>
               <a
                 href={`/api/export/${kind}`}
-                className="rounded-sm border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+                className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow sm:min-h-8"
               >
                 CSV indir
               </a>
@@ -107,7 +107,7 @@ export default async function AdminPrivacyPage() {
                 </div>
                 <a
                   href={`/api/kvkk/${member.id}`}
-                  className="rounded-sm border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow"
+                  className="inline-flex min-h-11 items-center justify-center rounded-sm border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow sm:min-h-8"
                 >
                   JSON indir
                 </a>

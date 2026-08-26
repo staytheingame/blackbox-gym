@@ -12,13 +12,11 @@ import {
   Pill,
   StatCard,
 } from "@/components/panel/ui";
+import { rowButtonClass } from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Sporcu Analizi — BlackBox Panel" };
 
 export const dynamic = "force-dynamic";
-
-const smallButton =
-  "rounded-sm border border-brand-border px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-brand-yellow hover:text-brand-yellow";
 
 const CONFIDENCE_TEXT: Record<string, string> = {
   yok: "Yorum yapacak veri yok",
@@ -58,10 +56,10 @@ export default async function MemberAnalysisPage({
       description="Gözlenen davranış, kaynağıyla birlikte. Burada teşhis yoktur: yalnız kayıtlardaki sayılar ve bunların ne anlama geldiği yazar."
       action={
         <div className="flex flex-wrap items-center gap-2">
-          <Link href={`/personel/uyeler/${member.id}`} className={smallButton}>
+          <Link href={`/personel/uyeler/${member.id}`} className={rowButtonClass}>
             ← Sporcu Kartı
           </Link>
-          <Link href="/personel/icgoruler" className={smallButton}>
+          <Link href="/personel/icgoruler" className={rowButtonClass}>
             Tüm İçgörüler
           </Link>
         </div>
