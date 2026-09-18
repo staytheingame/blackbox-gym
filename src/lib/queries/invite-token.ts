@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
-import { headers } from "next/headers";
+import { absoluteUrl } from "@/lib/app-url";
 
 /**
  * Davet anahtarı — sporcu ve personel davetlerinin ORTAK altyapısı.
@@ -35,31 +35,9 @@ export type InviteLink = {
 };
 
 /**
- * Davet edilene gönderilecek TAM adres.
- *
- * Öncelik sırası bilinçli: yapılandırılmış alan adı → dağıtımın üretim alan
- * adı → isteğin kendi host başlığı. Sonuncusu sayesinde yerelde ve önizleme
- * dağıtımlarında hiçbir ayar yapmadan da kopyalanabilir bir bağlantı çıkar;
- * kimsenin eline yarım bir "/davet/…" yolu geçmez.
+ * Davet edilene gönderilecek TAM adres. Adresin nasıl çözüldüğü
+ * `src/lib/app-url.ts` içinde — kayıt linki de aynı kaynağı kullanır.
  */
 export async function inviteUrl(token: string): Promise<string> {
-  const configured =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    (process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : null);
-
-  if (configured) return `${configured.replace(/\/$/, "")}/davet/${token}`;
-
-  const headerList = await headers();
-  const host = headerList.get("x-forwarded-host") ?? headerList.get("host");
-  if (!host) return `/davet/${token}`;
-
-  const protocol =
-    headerList.get("x-forwarded-proto") ??
-    (host.startsWith("localhost") || host.startsWith("127.0.0.1")
-      ? "http"
-      : "https");
-
-  return `${protocol}://${host}/davet/${token}`;
+  return absoluteUrl(`/davet/${token}`);
 }

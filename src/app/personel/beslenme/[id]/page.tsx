@@ -22,6 +22,7 @@ import {
 } from "@/components/panel/ui";
 import { PlanForm } from "../PlanForm";
 import { AddFoodForm, AddMealForm } from "./MealForms";
+import { CopyPlanForm } from "./CopyPlanForm";
 import {
   deleteFoodAction,
   deleteMealAction,
@@ -250,6 +251,22 @@ export default async function StaffNutritionPlanPage({
 
       <PanelCard title="Öğün Ekle">
         <AddMealForm planId={plan.id} />
+      </PanelCard>
+
+      <PanelCard
+        title="Başka Sporcuya Kopyala"
+        description="Aynı planı yeniden yazma — kopyala, kişiye göre ayarla."
+      >
+        <CopyPlanForm
+          planId={plan.id}
+          members={members
+            .filter((member) => member.id !== plan.memberId)
+            .map((member) => ({
+              id: member.id,
+              fullName: member.fullName,
+              memberNo: member.memberNo,
+            }))}
+        />
       </PanelCard>
 
       <PanelCard

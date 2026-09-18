@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { csvFileName, toCsv, type CsvColumn } from "./csv";
+import { PLAIN_COMMA, csvFileName, toCsv, type CsvColumn } from "./csv";
 
 type Row = { ad: string; ders: number; not?: string | null };
 
@@ -53,6 +53,26 @@ describe("toCsv", () => {
 
   it("kayıt yoksa yalnız başlığı yazar", () => {
     expect(lines(toCsv([], columns))).toEqual(["Ad;Ders;Not"]);
+  });
+});
+
+describe("toCsv — virgül lehçesi (reklam listesi)", () => {
+  it("virgülle ayırır ve BOM yazmaz", () => {
+    const csv = toCsv([{ ad: "Ali", ders: 12 }], columns, PLAIN_COMMA);
+
+    expect(csv.startsWith("\ufeff")).toBe(false);
+    expect(csv.trimEnd().split("\r\n")).toEqual([
+      "Ad,Ders,Not",
+      "Ali,12,",
+    ]);
+  });
+
+  it("virgül içeren hücreyi tırnaklar, noktalı virgülü tırnaklamaz", () => {
+    const csv = toCsv([{ ad: "Yılmaz, Ali", ders: 1 }], columns, PLAIN_COMMA);
+    expect(csv).toContain('"Yılmaz, Ali"');
+
+    const semi = toCsv([{ ad: "Yılmaz; Ali", ders: 1 }], columns, PLAIN_COMMA);
+    expect(semi).toContain("Yılmaz; Ali,1,");
   });
 });
 

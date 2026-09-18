@@ -4,9 +4,11 @@ import { redirect } from "next/navigation";
 import { getCurrentUser, requireStaff } from "@/lib/auth/guards";
 import { staffScopeFor } from "@/lib/auth/scope";
 import { listPendingInvites } from "@/lib/queries/invites";
+import { listJoinLinks } from "@/lib/queries/join-links";
 import { formatDateTimeTR } from "@/lib/date";
 import { EmptyState, PanelCard, PanelPage, Pill, StatCard } from "@/components/panel/ui";
 import { ReissueButton } from "./ReissueButton";
+import { JoinLinkBox } from "@/components/panel/JoinLinkBox";
 import { rowNameLinkClass } from "@/components/panel/form";
 
 export const metadata: Metadata = { title: "Davetler — BlackBox Panel" };
@@ -17,7 +19,14 @@ export default async function StaffInvitesPage() {
   const membership = await requireStaff(user.id);
   const scope = staffScopeFor(membership, user.id);
 
-  const pending = await listPendingInvites(scope);
+  const [pending, joinLinks] = await Promise.all([
+    listPendingInvites(scope),
+    listJoinLinks(membership.organizationId),
+  ]);
+  // Salonun herkese açık kayıt bağlantıları — antrenör de paylaşabilsin.
+  // Üretmek/kapatmak yönetici işi (bkz. /yonetim/kayit-linki), burada yalnız
+  // kopyalanır: sporcu eklemenin en hızlı yolu çoğu zaman bu bağlantıdır.
+  const shareable = joinLinks.filter((link) => link.usable);
   const expired = pending.filter((row) => row.expired || row.neverInvited);
   const waiting = pending.filter((row) => !row.expired && !row.neverInvited);
 
@@ -52,6 +61,23 @@ export default async function StaffInvitesPage() {
           hint="Hesabı olmayan sporcu"
         />
       </div>
+
+      {shareable.length > 0 && (
+        <PanelCard
+          title="Salonun Kayıt Bağlantısı"
+          description="Tek tek davet üretmek yerine bu bağlantıyı paylaş — gelen kişi kendi bilgilerini yazıp hesabını kendi açar."
+        >
+          <div className="space-y-4">
+            {shareable.map((link) => (
+              <JoinLinkBox
+                key={link.id}
+                url={link.url}
+                label={link.label}
+              />
+            ))}
+          </div>
+        </PanelCard>
+      )}
 
       {pending.length === 0 ? (
         <PanelCard title="Bekleyen yok">

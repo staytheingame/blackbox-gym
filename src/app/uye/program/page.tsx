@@ -23,11 +23,13 @@ import {
   StatCard,
 } from "@/components/panel/ui";
 import { WeekNav, parseWeekOffset } from "@/components/panel/WeekNav";
+import { WeekBoard } from "@/components/panel/WeekBoard";
 import {
-  CalendarLegend,
-  WeekCalendar,
-  type CalendarEntry,
-} from "@/components/panel/WeekCalendar";
+  buildDays,
+  entryHour,
+  hourWindow,
+  type BoardEntry,
+} from "@/components/panel/calendar-grid";
 import { dangerButtonClass } from "@/components/panel/form";
 import { BookButton } from "./BookButton";
 import { cancelBookingAction } from "./actions";
@@ -69,10 +71,10 @@ export default async function MemberProgramPage({
     getMembershipCredits(member.id),
   ]);
 
-  // Tek "şimdi" — ızgara, mobil liste ve masaüstü liste aynı anı kullansın;
-  // üç ayrı okuma, sınırdaki bir seansı bir yerde "geçti" bir yerde "geçmedi"
-  // gösterirdi. `Date.now()` değil `new Date()`: react-hooks/purity kuralı
-  // render içinde `Date.now`ı yasaklıyor.
+  // Tek "şimdi" — ızgara ve liste aynı anı kullansın; iki ayrı okuma,
+  // sınırdaki bir seansı bir yerde "geçti" bir yerde "geçmedi" gösterirdi.
+  // `Date.now()` değil `new Date()`: react-hooks/purity kuralı render içinde
+  // `Date.now`ı yasaklıyor.
   const now = new Date().getTime();
 
   const open = slots.filter((slot) => slot.status === "acik");
@@ -85,15 +87,16 @@ export default async function MemberProgramPage({
       (seat) => seat.memberId === member.id,
     );
 
-  const entries: CalendarEntry[] = open.map((slot) => {
+  const entries: BoardEntry[] = open.map((slot) => {
     const mine = mineIn(slot);
     const full = slot.takenSeats >= slot.capacity;
     const past = slot.startsAt.getTime() < now;
 
     return {
       id: slot.id,
-      startsAt: slot.startsAt,
-      durationMinutes: slot.durationMinutes,
+      dateKey: toGymDateKey(slot.startsAt),
+      time: formatTimeTR(slot.startsAt),
+      hour: entryHour(slot.startsAt),
       label: slot.title ?? SLOT_KIND_LABEL[slot.kind] ?? slot.kind,
       // Rezerve edilmiş hücrede de kontenjan kalsın: grup dersinde "yerim var
       // ama kaç kişiyiz" sorusu rezervasyondan sonra da soruluyor.
@@ -122,20 +125,33 @@ export default async function MemberProgramPage({
           </form>
         ) : undefined
       ) : (
-        <BookButton
-          slotId={slot.id}
-          full={full}
-          disabled={!canBook}
-          compact
-        />
+        <BookButton slotId={slot.id} full={full} disabled={!canBook} compact />
       ),
     };
   });
 
+  // Sporcuya boş sabah bantları gösterilmez: pencere ders olan saatlere göre
+  // daralır, antrenörün açma ekranındaki geniş pencere burada gereksizdir.
+  const hourValues = entries.map((entry) => entry.hour);
+  const bounds =
+    hourValues.length > 0
+      ? { first: Math.min(...hourValues), last: Math.max(...hourValues) }
+      : { first: 18, last: 21 };
+
+  const days = buildDays(from);
+  const hours = hourWindow(
+    open.map((slot) => ({
+      hour: entryHour(slot.startsAt),
+      time: formatTimeTR(slot.startsAt),
+      durationMinutes: slot.durationMinutes,
+    })),
+    bounds,
+  );
+
   return (
     <PanelPage
       title="Antrenörün Açık Saatleri"
-      description="Takvimden istediğin saati doğrudan kapabilirsin. Dolu bir saate katılmak istersen isteğin antrenöre gider; onaylarsa grup dersi olarak katılırsın."
+      description="Takvimden istediğin saati doğrudan kapabilirsin. Telefonda üstteki gün şeridinden gün seç. Dolu bir saate katılmak istersen isteğin antrenöre gider; onaylarsa grup dersi olarak katılırsın."
       action={
         <WeekNav
           basePath="/uye/program"
@@ -202,83 +218,18 @@ export default async function MemberProgramPage({
             Bu hafta için açılmış saat yok. Sonraki haftaya bakabilirsin.
           </EmptyState>
         ) : (
-          <>
-            <WeekCalendar
-              weekStart={from}
-              entries={entries}
-              todayKey={toGymDateKey(new Date())}
-              fallback={
-                <ul className="divide-y divide-brand-border">
-                  {dayGroups(open).map((group) => (
-                    <li
-                      key={toGymDateKey(group[0].startsAt)}
-                      className="py-3 first:pt-0 last:pb-0"
-                    >
-                      <div className="text-xs font-bold uppercase tracking-wide text-brand-yellow">
-                        {formatDayTR(group[0].startsAt)}
-                      </div>
-                      <ul className="mt-2 space-y-2">
-                        {group.map((slot) => {
-                          const mine = mineIn(slot);
-                          const full = slot.takenSeats >= slot.capacity;
-                          const past = slot.startsAt.getTime() < now;
-
-                          return (
-                            <li
-                              key={slot.id}
-                              className="flex flex-wrap items-center justify-between gap-2"
-                            >
-                              <div className="text-sm text-brand-white">
-                                <span className="font-semibold tabular-nums">
-                                  {formatTimeTR(slot.startsAt)}
-                                </span>
-                                <span className="ml-2 text-xs text-brand-muted">
-                                  {SLOT_KIND_LABEL[slot.kind] ?? slot.kind} ·{" "}
-                                  {slot.takenSeats}/{slot.capacity}
-                                </span>
-                              </div>
-                              {mine ? (
-                                <Pill
-                                  tone={
-                                    mine.status === "bekliyor"
-                                      ? "neutral"
-                                      : "yellow"
-                                  }
-                                >
-                                  {BOOKING_STATUS_LABEL[mine.status]}
-                                </Pill>
-                              ) : (
-                                <BookButton
-                                  slotId={slot.id}
-                                  full={full}
-                                  disabled={past || !canBook}
-                                  disabledReason={
-                                    past
-                                      ? "Bu saat geçti"
-                                      : !credits
-                                        ? "Üyelik gerekli"
-                                        : "Ders hakkın bitti"
-                                  }
-                                />
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </li>
-                  ))}
-                </ul>
-              }
-            />
-            <CalendarLegend
-              items={[
-                { tone: "acik", label: "Boş — kapabilirsin" },
-                { tone: "benim", label: "Senin rezervasyonun" },
-                { tone: "bekliyor", label: "Onay bekliyor" },
-                { tone: "dolu", label: "Dolu — istek gönderebilirsin" },
-              ]}
-            />
-          </>
+          <WeekBoard
+            days={days}
+            hours={hours}
+            entries={entries}
+            todayKey={toGymDateKey(new Date())}
+            legend={[
+              { tone: "acik", label: "Boş — kapabilirsin" },
+              { tone: "benim", label: "Senin rezervasyonun" },
+              { tone: "bekliyor", label: "Onay bekliyor" },
+              { tone: "dolu", label: "Dolu — istek gönderebilirsin" },
+            ]}
+          />
         )}
       </PanelCard>
 

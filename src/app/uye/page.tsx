@@ -40,7 +40,13 @@ const typeLabels: Record<string, string> = {
   kondisyon: "Kondisyon",
 };
 
-export default async function MemberDashboardPage() {
+export default async function MemberDashboardPage({
+  searchParams,
+}: {
+  /** Kayıt bağlantısından gelen sporcu `?yeni=1` ile düşer. */
+  searchParams: Promise<{ yeni?: string }>;
+}) {
+  const { yeni } = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/giris");
   const member = await getCurrentMember(user.id);
@@ -87,6 +93,26 @@ export default async function MemberDashboardPage() {
         </div>
       }
     >
+      {yeni === "1" && (
+        <div className="rounded-sm border border-brand-yellow/40 bg-brand-yellow/10 p-5">
+          <h2 className="font-display text-lg uppercase tracking-wide text-brand-yellow">
+            Kaydın açıldı
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-brand-white">
+            Sıradaki adım: <b>Dersler → Boş Saatler</b> ekranından antrenörünün
+            açtığı bir saati kap. Üyelik paketin antrenörün tarafından
+            başlatılır; o zamana kadar ders hakkın görünmeyebilir.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link href="/uye/program" className={primaryButtonClass}>
+              Boş Saatlere Bak
+            </Link>
+            <Link href="/uye/profil" className={headerLinkClass}>
+              Bilgilerimi tamamla →
+            </Link>
+          </div>
+        </div>
+      )}
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Genel Skor"

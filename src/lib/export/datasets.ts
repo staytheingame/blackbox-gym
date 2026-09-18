@@ -1,13 +1,23 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { organizationScope } from "@/lib/auth/scope";
-import { toCsv, csvFileName, type CsvColumn } from "@/lib/export/csv";
+import {
+  PLAIN_COMMA,
+  toCsv,
+  csvFileName,
+  type CsvColumn,
+} from "@/lib/export/csv";
 import { formatDateTR, formatDateTimeTR } from "@/lib/date";
 import { BOOKING_STATUS_LABEL, type BookingStatus } from "@/domain/booking/credits";
 import { SLOT_KIND_LABEL } from "@/lib/queries/slots";
 import { listRankBoard } from "@/lib/queries/ranks";
 import { listWaiverBoard } from "@/lib/queries/waivers";
 import { listAuditLog } from "@/lib/queries/audit";
+import {
+  META_FIELDS,
+  isMatchable,
+  toMatchingRow,
+} from "@/domain/marketing/meta-matching";
 
 /**
  * Dışa aktarılabilir veri setleri — "salonun defterini Excel'de aç".
@@ -24,6 +34,7 @@ export const EXPORT_KINDS = [
   "kusaklar",
   "onaylar",
   "denetim",
+  "reklam-eslesme",
 ] as const;
 export type ExportKind = (typeof EXPORT_KINDS)[number];
 
@@ -34,6 +45,7 @@ export const EXPORT_KIND_LABEL: Record<ExportKind, string> = {
   kusaklar: "Kuşak durumu",
   onaylar: "Onam & sağlık beyanı durumu",
   denetim: "Denetim kaydı",
+  "reklam-eslesme": "Reklam eşleşme listesi (Meta)",
 };
 
 export const EXPORT_KIND_HINT: Record<ExportKind, string> = {
@@ -43,6 +55,8 @@ export const EXPORT_KIND_HINT: Record<ExportKind, string> = {
   kusaklar: "Güncel kuşak, hedef kuşak, ilerleme yüzdesi.",
   onaylar: "Eksik/eski imzalar ve sağlık notu bulunan sporcular.",
   denetim: "Son 500 yönetim işlemi — kim, ne zaman, ne yaptı.",
+  "reklam-eslesme":
+    "Meta müşteri listesi biçiminde normalleştirilmiş üye verisi — reklam eşleşmesi için.",
 };
 
 export type ExportFile = { fileName: string; csv: string };
@@ -205,6 +219,57 @@ async function auditCsv(organizationId: string): Promise<string> {
   return toCsv(rows, columns);
 }
 
+/**
+ * REKLAM EŞLEŞME LİSTESİ — Meta müşteri listesi biçimi.
+ *
+ * Sütun adları Meta'nın beklediği adlardır (email, phone, fn, ln, ct, st,
+ * country, zip, dob, ge); yükleme ekranı eşlemeyi kendiliğinden bulur.
+ * Değerler normalleştirilmiş ama HAM'dır — Meta dosyayı tarayıcıda kendisi
+ * SHA-256'lar, gerekçe `src/domain/marketing/meta-matching.ts` başındadır.
+ *
+ * E-postası VE telefonu olmayan satır dosyaya girmez: eşleşmeye yetmez,
+ * yüklemede yalnız "eşleşmedi" sayısını şişirir.
+ *
+ * Bu dosya kimlik verisi taşır — uç `requireStaff` ile korunur ve her indirme
+ * denetim kaydına düşer (bkz. `app/api/export/[kind]/route.ts`).
+ */
+async function adMatchingCsv(organizationId: string): Promise<string> {
+  const members = await prisma.member.findMany({
+    where: { organizationId, anonymizedAt: null },
+    orderBy: { createdAt: "desc" },
+    select: {
+      fullName: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      phone: true,
+      city: true,
+      state: true,
+      country: true,
+      postalCode: true,
+      birthDate: true,
+      gender: true,
+      user: { select: { email: true } },
+    },
+  });
+
+  const rows = members
+    .map((member) =>
+      toMatchingRow({
+        ...member,
+        email: member.email ?? member.user?.email ?? null,
+      }),
+    )
+    .filter(isMatchable);
+
+  const columns: CsvColumn<(typeof rows)[number]>[] = META_FIELDS.map(
+    (field) => ({ header: field, value: (row) => row[field] }),
+  );
+
+  // Virgül ayraç, BOM yok — Meta'nın yükleme ekranı böyle bekliyor.
+  return toCsv(rows, columns, PLAIN_COMMA);
+}
+
 export async function buildExport(
   kind: ExportKind,
   organizationId: string,
@@ -216,6 +281,7 @@ export async function buildExport(
     kusaklar: () => ranksCsv(organizationId),
     onaylar: () => waiversCsv(organizationId),
     denetim: () => auditCsv(organizationId),
+    "reklam-eslesme": () => adMatchingCsv(organizationId),
   };
 
   return {

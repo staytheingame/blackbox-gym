@@ -10,6 +10,8 @@ import { formatDateTR } from "@/lib/date";
 import { logoutAction } from "@/lib/auth/actions";
 import { PanelCard, PanelPage, Pill, Scaffold } from "@/components/panel/ui";
 import { PasswordChangeForm } from "@/components/panel/PasswordChangeForm";
+import { getMemberPersonalInfo } from "@/lib/queries/member-profile";
+import { PersonalInfoForm } from "./PersonalInfoForm";
 
 export const metadata: Metadata = { title: "Profil — BlackBox Panel" };
 
@@ -19,7 +21,10 @@ export default async function MemberProfilePage() {
   const member = await getCurrentMember(user.id);
   if (!member) redirect("/giris");
 
-  const membership = await requireOrganizationMembership(user.id);
+  const [membership, info] = await Promise.all([
+    requireOrganizationMembership(user.id),
+    getMemberPersonalInfo(member.id),
+  ]);
 
   const rows: { label: string; value: string }[] = [
     { label: "Ad Soyad", value: member.fullName },
@@ -69,6 +74,15 @@ export default async function MemberProfilePage() {
         </dl>
       </PanelCard>
 
+      {info && (
+        <PanelCard
+          title="Kişisel Bilgilerim"
+          description="Salonun sana ulaşabilmesi ve acil durumda ne yapacağını bilmesi için. E-postanı değiştirmek istersen salona söyle — giriş kimliğin ona bağlı."
+        >
+          <PersonalInfoForm info={info} />
+        </PanelCard>
+      )}
+
       <PanelCard
         title="Şifre Değiştir"
         description="Panele girdiğin şifre. Davet bağlantısıyla kurduğun şifreyi buradan yenileyebilirsin."
@@ -78,14 +92,10 @@ export default async function MemberProfilePage() {
 
       <Scaffold
         mirrors="Kong Academy → Danışan / Profil (settings)"
-        summary="Şifre değiştirme çalışıyor; iletişim bilgisi ve sporcu bilgileri şu an yalnız okunur — düzenlemeyi antrenör yapıyor."
-        features={[
-          "İletişim bilgisi güncelleme",
-          "Bildirim tercihleri",
-          "Sıklet / boy gibi sporcu bilgileri",
-        ]}
+        summary="Şifre değiştirme ve kişisel bilgi güncelleme çalışıyor; bildirim tercihleri ve sporcu ölçüleri henüz yok."
+        features={["Bildirim tercihleri", "Sıklet / boy gibi sporcu ölçüleri"]}
         needs={[
-          "Profil güncelleme server action + zod şeması",
+          "Bildirim tercihi alanları (`Member.remindersEnabled` dışında kanal bazlı)",
           "Zorunlu ilk şifre değişimi bayrağı (`User.mustChangePassword`)",
         ]}
       />

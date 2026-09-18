@@ -51,6 +51,7 @@ export type BadgeKey =
   | "pendingBookings" // personel: onay bekleyen grup dersi isteği
   | "pendingAttendance" // personel: yoklaması alınmamış geçmiş seans
   | "pendingInvites" // personel/yönetici: hesabını kurmamış davetli sporcu
+  | "unassignedRegistrations" // yönetici: kayıt linkinden gelip antrenörü atanmamış
   | "pendingWaivers" // personel: onam/sağlık beyanı eksik sporcu
   | "rankReady" // personel: terfiye hazır sporcu
   | "checkInDue" // üye: bu haftanın kontrolü gönderilmedi
@@ -678,6 +679,25 @@ const ADMIN_NAV: PanelNavItem[] = [
     shortLabel: "Sporcu",
     badgeKey: "pendingInvites",
     title: "Tüm Sporcular & Davet Durumu",
+    children: [
+      {
+        id: "yonetici-sporcu-liste",
+        label: "Liste",
+        href: "/yonetim/uyeler",
+        icon: UsersIcon,
+        roles: ["admin"],
+        title: "Tüm Sporcular & Davet Durumu",
+      },
+      {
+        id: "yonetici-kayit-linki",
+        label: "Kayıt Linki",
+        href: "/yonetim/kayit-linki",
+        icon: InboxIcon,
+        roles: ["admin"],
+        title: "Kayıt Bağlantısı & Gelen Kayıtlar",
+        badgeKey: "unassignedRegistrations",
+      },
+    ],
   },
 
   {

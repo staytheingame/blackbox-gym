@@ -15,9 +15,13 @@ import { prisma } from "@/lib/db";
 
 export const AUDIT_ACTIONS = [
   "uye.eklendi",
+  "uye.kendi-kaydoldu",
+  "uye.bilgi-guncelledi",
   "uye.koc-atandi",
   "uye.anonimlestirildi",
   "davet.uretildi",
+  "kayit-linki.uretildi",
+  "kayit-linki.durum",
   "personel.davet",
   "personel.davet-iptal",
   "personel.hesap-kuruldu",
@@ -26,6 +30,7 @@ export const AUDIT_ACTIONS = [
   "plan.sablon-eklendi",
   "plan.sablon-guncellendi",
   "plan.sablon-silindi",
+  "plan.toplu-atandi",
   "uyelik.baslatildi",
   "uyelik.durum",
   "seans.acildi",
@@ -50,9 +55,13 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
 export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   "uye.eklendi": "Sporcu eklendi",
+  "uye.kendi-kaydoldu": "Sporcu kayıt linkinden kaydoldu",
+  "uye.bilgi-guncelledi": "Sporcu kişisel bilgilerini güncelledi",
   "uye.koc-atandi": "Sorumlu antrenör değişti",
   "uye.anonimlestirildi": "Sporcu anonimleştirildi",
   "davet.uretildi": "Davet bağlantısı üretildi",
+  "kayit-linki.uretildi": "Kayıt bağlantısı üretildi",
+  "kayit-linki.durum": "Kayıt bağlantısı açıldı/kapatıldı",
   "personel.davet": "Kadroya davet çıkarıldı",
   "personel.davet-iptal": "Personel daveti iptal edildi",
   "personel.hesap-kuruldu": "Personel hesabını kurdu",
@@ -61,6 +70,7 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   "plan.sablon-eklendi": "Antrenman şablonu oluşturuldu",
   "plan.sablon-guncellendi": "Antrenman şablonu güncellendi",
   "plan.sablon-silindi": "Antrenman şablonu silindi",
+  "plan.toplu-atandi": "Şablon birden çok sporcuya atandı",
   "uyelik.baslatildi": "Üyelik başlatıldı/yenilendi",
   "uyelik.durum": "Üyelik durumu değişti",
   "seans.acildi": "Ders saati açıldı",

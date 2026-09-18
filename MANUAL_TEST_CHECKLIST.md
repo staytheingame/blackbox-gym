@@ -236,3 +236,82 @@ bağlantısından şifresini kur.
 - [ ] Yayından kaldırılan şablon listede "Yayında değil" rozetiyle çıkıyor.
 - [ ] Başka salonun şablon adresi elle yazılınca **404** veriyor.
 - [ ] Sporcuya atanan şablon `/uye/antrenman` ekranında doğru haftayla çıkıyor.
+
+## Faz 14 — takvim, kayıt linki, kişisel bilgiler
+
+### Takvimden toplu saat açma (antrenör)
+- [ ] `/personel/program` → takvimde boş bir hücreye dokununca hücre sarıya
+      dönüyor ve "Saatleri Aç (1)" yazıyor.
+- [ ] İkinci, üçüncü hücre eklenince sayı artıyor; gün başlığındaki rozet o
+      günde kaç saat seçildiğini gösteriyor.
+- [ ] **Gün başlığına** dokununca o günün tüm boş saatleri seçiliyor; ikinci
+      dokunuşta bırakıyor.
+- [ ] **Saat etiketine** dokununca o saat tüm günlerde seçiliyor.
+- [ ] Dolu (seansı olan) hücre grup seçiminde atlanıyor — üstüne yazmıyor.
+- [ ] "Saatleri Aç" sonrası seçim temizleniyor ve "N seans açıldı." yazıyor.
+- [ ] "Kaç hafta tekrarlansın = 4" ile açılan saatler sonraki haftalarda da
+      görünüyor (hafta ileri okuyla bak).
+- [ ] Zaten açık bir saat seçilip gönderilirse mesaj "… zaten açıktı" diyor,
+      diğer saatler yine de açılıyor.
+- [ ] Geçmiş saat seçilirse atlanıyor; hepsi geçmişse uyarı veriyor.
+- [ ] "Başlangıç dakikası = Buçuk" ile açılan seans 19:30 olarak görünüyor.
+- [ ] Kimse kapmamış seansın hücresindeki "Kaldır" seansı iptal ediyor ve
+      **seçim kaybolmuyor**.
+- [ ] Dolu seansın hücresinde "Kaldır" düğmesi YOK (iptal aşağıdaki listeden).
+
+### Takvim — telefon (375px)
+- [ ] `/personel/program` dar ekranda tek gün sütunu gösteriyor; üstteki
+      gün şeridinde yedi gün de yatay kaydırma olmadan sığıyor.
+- [ ] Gün değiştirince seçim kaybolmuyor (Pzt'de 2 seç, Çar'a geç, Pzt'ye dön).
+- [ ] `/uye/program` telefonda: dersi olan günlerde sarı nokta var; boş günde
+      "Bu gün için açılmış saat yok" yazıyor, on üç boş satır YOK.
+- [ ] Gelecekteki bir seansın altında "Kap" düğmesi var; geçmiş seansta yok.
+
+### Tek kayıt linki
+- [ ] `/yonetim/kayit-linki` → ad yazıp "Bağlantıyı Üret" deyince adres
+      (`/katil/<slug>`) ekranda çıkıyor; "Kopyala" ve WhatsApp düğmeleri
+      çalışıyor.
+- [ ] Bağlantı gizli sekmede açılınca salon adıyla kayıt formu geliyor.
+- [ ] Zorunlu alanlar boşken form gönderilmiyor; KVKK kutusu işaretlenmeden
+      kayıt olmuyor.
+- [ ] Şifre 8 karakterden kısa ya da tekrarı farklıysa uyarı veriyor.
+- [ ] Kayıt tamamlanınca oturum **hemen** açılıyor, `/uye` ekranında
+      "Kaydın açıldı" kutusu çıkıyor.
+- [ ] Aynı e-postayla ikinci kez kaydolunamıyor ("hesap zaten var").
+- [ ] Yeni kayıt `/yonetim/kayit-linki` alt listesinde ve `/personel/adaylar`
+      ekranında görünüyor; durumu **Aday**.
+- [ ] Linkte "Gelenler kime atansın" doluysa sporcu o antrenöre atanıyor;
+      boşsa "Antrenör atanmadı" rozeti çıkıyor.
+- [ ] Kontenjan 1 verilen link ikinci kayıtta "Kontenjan doldu" diyor.
+- [ ] Son günü geçmiş link "Süresi dolmuş" diyor.
+- [ ] "Kapat" denen link `/katil/<slug>` adresinde "Kayıt kapalı" veriyor ve
+      `/personel/davetler` ekranından da kalkıyor.
+- [ ] Oturumu açık bir kullanıcı `/katil/<slug>` açarsa `/uye`ye gidiyor —
+      ikinci hesap açılmıyor.
+- [ ] `/personel/davetler` ekranında açık kayıt bağlantısı kopyalanabiliyor
+      (antrenör de paylaşabilsin), üretme/kapatma düğmesi YOK.
+
+### Kişisel bilgiler
+- [ ] `/uye/profil` → "Kişisel Bilgilerim" kartında eksik alanlar üstte
+      listeleniyor ("Eksik bilgi: telefon, doğum tarihi, ilçe").
+- [ ] Bilgiler kaydedilince menüdeki ad da güncelleniyor (ad/soyad değişince).
+- [ ] Sağlık notu `/personel/uyeler/<id>` kartında sarı kutuda görünüyor.
+- [ ] İlçe alanı listeden seçilebiliyor ama elle de yazılabiliyor.
+
+### Reklam eşleşme dosyası
+- [ ] `/api/export/reklam-eslesme` personel oturumuyla CSV indiriyor; başlık
+      satırı `email,phone,fn,ln,ct,st,country,zip,dob,ge` ve ayraç **virgül**.
+- [ ] "0555 111 22 33" numarası dosyada `905551112233` olarak çıkıyor.
+- [ ] Şehir/il küçük harf ve boşluksuz ("istanbul"), ülke `tr`.
+- [ ] E-postası ve telefonu olmayan üye dosyada YOK.
+- [ ] İndirme `/yonetim/kayitlar` denetim kaydına düşüyor.
+
+### Toplu program ataması / beslenme kopyası
+- [ ] `/personel/planlar` → "Toplu Ata": şablon seç, birkaç sporcu işaretle,
+      "Programı Ata (N)" deyince "N sporcuya atandı." çıkıyor.
+- [ ] Zaten programı olan sporcunun satırında "şu an: … — atama bunu kapatır"
+      uyarısı var; atamadan sonra `/uye/antrenman` yeni programı gösteriyor.
+- [ ] Antrenör hesabı yalnız KENDİ sporcularını listede görüyor.
+- [ ] `/personel/beslenme/<id>` → "Başka Sporcuya Kopyala" sonrası hedef
+      sporcuda **taslak** plan var, öğünler ve besinler kopyalanmış, öğün
+      işaretleri boş.

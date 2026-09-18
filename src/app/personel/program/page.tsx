@@ -1,15 +1,12 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   getCurrentUser,
   requireOrganizationMembership,
 } from "@/lib/auth/guards";
 import { staffScopeFor } from "@/lib/auth/scope";
-import {
-  SLOT_KIND_LABEL,
-  listSlots,
-  type SlotView,
-} from "@/lib/queries/slots";
+import { SLOT_KIND_LABEL, listSlots, type SlotView } from "@/lib/queries/slots";
 import { BOOKING_STATUS_LABEL } from "@/domain/booking/credits";
 import {
   formatDayTR,
@@ -25,18 +22,26 @@ import {
   StatCard,
 } from "@/components/panel/ui";
 import { WeekNav, parseWeekOffset } from "@/components/panel/WeekNav";
+import { WeekBoard } from "@/components/panel/WeekBoard";
 import {
-  CalendarLegend,
-  WeekCalendar,
-  type CalendarEntry,
-} from "@/components/panel/WeekCalendar";
-import { dangerButtonClass } from "@/components/panel/form";
-import { SlotForm } from "./SlotForm";
-import { cancelSlotAction } from "./actions";
+  buildDays,
+  entryHour,
+  hourWindow,
+  type BoardEntry,
+} from "@/components/panel/calendar-grid";
+import {
+  dangerButtonClass,
+  secondaryButtonClass,
+} from "@/components/panel/form";
+import { SlotFields } from "./SlotFields";
+import { cancelSlotAction, createSlotAction } from "./actions";
 
 export const metadata: Metadata = { title: "Ders Programı — BlackBox Panel" };
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Antrenör saat açarken sabahtan geceye tüm bantları görmeli. */
+const OPENING_HOURS = { first: 7, last: 23 };
 
 function dayGroups(slots: SlotView[]): { key: string; slots: SlotView[] }[] {
   const groups = new Map<string, SlotView[]>();
@@ -49,25 +54,17 @@ function dayGroups(slots: SlotView[]): { key: string; slots: SlotView[] }[] {
     .map(([key, rows]) => ({ key, slots: rows }));
 }
 
-/** `?tarih=`/`?saat=` yalnız takvimden gelir; yine de biçim doğrulanır. */
-function pickDate(value: string | undefined, fallback: string): string {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value ?? "") ? value! : fallback;
-}
-function pickTime(value: string | undefined): string {
-  return /^([01]\d|2[0-3]):[0-5]\d$/.test(value ?? "") ? value! : "19:00";
-}
-
 export default async function StaffProgramPage({
   searchParams,
 }: {
-  searchParams: Promise<{ hafta?: string; tarih?: string; saat?: string }>;
+  searchParams: Promise<{ hafta?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/giris");
   const membership = await requireOrganizationMembership(user.id);
   const scope = staffScopeFor(membership, user.id);
 
-  const { hafta, tarih, saat } = await searchParams;
+  const { hafta } = await searchParams;
   const offset = parseWeekOffset(hafta);
 
   const thisWeekStart = getWeekStartInstant(new Date());
@@ -83,20 +80,13 @@ export default async function StaffProgramPage({
   );
   const bookedSeats = open.reduce((sum, slot) => sum + slot.takenSeats, 0);
   const pending = open.reduce((sum, slot) => sum + slot.pendingSeats.length, 0);
+  const attendanceDue = slots.filter((slot) => slot.needsAttendance).length;
 
-  // Takvimden gelen gün/saat formu doldurur; yoksa görüntülenen haftanın başı.
-  const defaultDate = pickDate(
-    tarih,
-    toGymDateKey(
-      offset === 0 ? new Date() : new Date(from.getTime() + MS_PER_DAY),
-    ),
-  );
-  const defaultTime = pickTime(saat);
-
-  const entries: CalendarEntry[] = slots.map((slot) => ({
+  const entries: BoardEntry[] = slots.map((slot) => ({
     id: slot.id,
-    startsAt: slot.startsAt,
-    durationMinutes: slot.durationMinutes,
+    dateKey: toGymDateKey(slot.startsAt),
+    time: formatTimeTR(slot.startsAt),
+    hour: entryHour(slot.startsAt),
     label: slot.title ?? SLOT_KIND_LABEL[slot.kind] ?? slot.kind,
     detail:
       slot.status === "iptal"
@@ -110,14 +100,41 @@ export default async function StaffProgramPage({
         : slot.takenSeats >= slot.capacity
           ? "dolu"
           : "acik",
+    // Yanlış açılan saati olduğu yerde kaldırmak için. Bilinçli olarak `<form>`
+    // DEĞİL, `formAction` taşıyan bir düğme: ızgara seçim formunun içinde
+    // duruyor ve HTML iç içe form kabul etmiyor (hidrasyon hatası verirdi).
+    // `formNoValidate` da şart — yoksa tarayıcı seçim formunun zorunlu
+    // alanlarını doğrulamaya kalkar ve iptal isteği hiç gitmez.
+    // Dolu seansta düğme yok: yanlışlıkla basılıp sporcunun yeri gitmesin,
+    // o iptal aşağıdaki listeden bilerek yapılır.
+    action:
+      slot.status === "acik" && slot.takenSeats === 0 ? (
+        <button
+          type="submit"
+          formAction={cancelSlotAction.bind(null, slot.id)}
+          formNoValidate
+          aria-label={`${formatTimeTR(slot.startsAt)} seansını kaldır`}
+          className="inline-flex min-h-7 w-full items-center justify-center rounded-sm border border-brand-border px-1 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-brand-muted transition-colors hover:border-red-400 hover:text-red-300"
+        >
+          Kaldır
+        </button>
+      ) : undefined,
   }));
 
-  const weekQuery = offset === 0 ? "" : `hafta=${offset}&`;
+  const days = buildDays(from);
+  const hours = hourWindow(
+    slots.map((slot) => ({
+      hour: entryHour(slot.startsAt),
+      time: formatTimeTR(slot.startsAt),
+      durationMinutes: slot.durationMinutes,
+    })),
+    OPENING_HOURS,
+  );
 
   return (
     <PanelPage
-      title="Açık Saatler & Rezervasyonlar"
-      description="Takvimde boş bir hücreye bas, o gün ve saat aşağıdaki formda dolsun. Sporcular aynı takvimden istediği saati kapar; dolu bir saate ikinci kişi katılmak isterse istek İstekler sekmesine düşer."
+      title="Ders Takvimi"
+      description="Boş hücrelere dokun, biriktir, bir kere “Saatleri Aç”a bas — tek tek açmak yok. Gün başlığı o günün tamamını, saat etiketi o saati tüm günlerde seçer. Sporcular aynı takvimden istediği saati kapar."
       action={
         <WeekNav
           basePath="/personel/program"
@@ -143,75 +160,46 @@ export default async function StaffProgramPage({
         />
       </div>
 
+      {attendanceDue > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-brand-yellow/40 bg-brand-yellow/10 p-4">
+          <p className="text-sm text-brand-white">
+            {attendanceDue} seansın yoklaması alınmadı — hakediş yoklamadan
+            doğuyor.
+          </p>
+          <Link href="/personel/program/yoklama" className={secondaryButtonClass}>
+            Yoklamaya Git
+          </Link>
+        </div>
+      )}
+
       <PanelCard
-        title="Haftalık Takvim"
-        description="Boş hücredeki + işareti o gün ve saati aşağıdaki forma taşır."
+        title="Saat Aç"
+        description="Ayarları bir kez yap, takvimde istediğin kadar hücreye dokun."
       >
-        <WeekCalendar
-          weekStart={from}
+        <WeekBoard
+          days={days}
+          hours={hours}
           entries={entries}
           todayKey={toGymDateKey(new Date())}
-          emptyHref={(dateKey, time) =>
-            `/personel/program?${weekQuery}tarih=${dateKey}&saat=${time}#saat-ac`
-          }
-          fallback={
-            slots.length === 0 ? (
-              <EmptyState>
-                Bu hafta için açık saat yok — aşağıdaki formdan ekleyebilirsin.
-              </EmptyState>
-            ) : (
-              <ul className="divide-y divide-brand-border">
-                {dayGroups(slots).map((group) => (
-                  <li key={group.key} className="py-3 first:pt-0 last:pb-0">
-                    <div className="text-xs font-bold uppercase tracking-wide text-brand-yellow">
-                      {formatDayTR(group.slots[0].startsAt)}
-                    </div>
-                    <ul className="mt-1.5 space-y-1">
-                      {group.slots.map((slot) => (
-                        <li key={slot.id} className="text-sm text-brand-white">
-                          <span className="tabular-nums font-semibold">
-                            {formatTimeTR(slot.startsAt)}
-                          </span>
-                          <span className="ml-2 text-xs text-brand-muted">
-                            {SLOT_KIND_LABEL[slot.kind] ?? slot.kind} ·{" "}
-                            {slot.takenSeats}/{slot.capacity}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
-            )
-          }
-        />
-        <CalendarLegend
-          items={[
+          composer={{
+            action: createSlotAction,
+            fields: <SlotFields />,
+            inputName: "cells",
+            submitLabel: "Saatleri Aç",
+          }}
+          legend={[
             { tone: "acik", label: "Boş yeri var" },
             { tone: "dolu", label: "Kontenjan doldu" },
             { tone: "iptal", label: "İptal" },
           ]}
+          emptyText="Bu hafta hiç seans yok — takvimdeki boş hücrelere dokunup açabilirsin."
         />
-      </PanelCard>
-
-      <PanelCard
-        title="Yeni Saat Aç"
-        description="Tek seferlik ya da haftalık tekrarlı. Kontenjan 1 bırakırsan birebir olur."
-      >
-        <div id="saat-ac" className="scroll-mt-24">
-          <SlotForm
-            key={`${defaultDate}-${defaultTime}`}
-            defaultDate={defaultDate}
-            defaultTime={defaultTime}
-          />
-        </div>
       </PanelCard>
 
       {slots.length === 0 ? (
         <PanelCard title="Bu Hafta">
           <EmptyState>
-            Bu hafta için açık saat yok — yukarıdaki takvimden ya da formdan
-            ekleyebilirsin.
+            Bu hafta için açık saat yok — yukarıdaki takvimden açabilirsin.
           </EmptyState>
         </PanelCard>
       ) : (

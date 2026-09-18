@@ -369,23 +369,47 @@ export async function listAttendanceRecords(memberId: string) {
 export type CreateSlotInput = {
   organizationId: string;
   coachUserId: string;
-  /** İlk seansın başlangıcı. */
-  startsAt: Date;
+  /**
+   * Açılacak seansların başlangıçları. Takvimde birden çok hücre seçilebildiği
+   * için **liste**: antrenör bir haftanın on saatini tek seferde açar.
+   */
+  starts: Date[];
   durationMinutes: number;
   capacity: number;
   kind: SlotKind;
   title?: string;
   notes?: string;
-  /** 1 = tek seferlik; >1 ise haftalık tekrarla bu kadar hafta açılır. */
+  /** 1 = tek seferlik; >1 ise her saat haftalık tekrarla bu kadar hafta açılır. */
   repeatWeeks: number;
 };
 
-/** Aynı saate ikinci slot açılmasın — çakışma kontrolü. */
-export async function createSlots(input: CreateSlotInput): Promise<number> {
-  const starts: Date[] = [];
-  for (let week = 0; week < Math.max(input.repeatWeeks, 1); week++) {
-    starts.push(new Date(input.startsAt.getTime() + week * 7 * MS_PER_DAY));
+export type CreateSlotResult = {
+  created: number;
+  /** Aynı saatte zaten seans olduğu için açılmayanlar. */
+  skipped: number;
+};
+
+/**
+ * Seçilen saatleri açar. Aynı saate ikinci slot açılmaz — çakışanlar sessizce
+ * atlanır ve `skipped` olarak sayılır; çağıran ekranda "3 saat zaten açıktı"
+ * diye söyler. Hata döndürmek yerine atlamak bilinçli: on saat seçen antrenör,
+ * biri çakıştığı için dokuzunu da kaybetmemeli.
+ */
+export async function createSlots(
+  input: CreateSlotInput,
+): Promise<CreateSlotResult> {
+  const weeks = Math.max(input.repeatWeeks, 1);
+
+  // Tekrarları aç ve aynı anı iki kez yazma (iki hücre aynı saate düşebilir).
+  const expanded = new Map<number, Date>();
+  for (const start of input.starts) {
+    for (let week = 0; week < weeks; week += 1) {
+      const date = new Date(start.getTime() + week * 7 * MS_PER_DAY);
+      expanded.set(date.getTime(), date);
+    }
   }
+  const starts = [...expanded.values()];
+  if (starts.length === 0) return { created: 0, skipped: 0 };
 
   const existing = await prisma.trainingSlot.findMany({
     where: {
@@ -397,7 +421,7 @@ export async function createSlots(input: CreateSlotInput): Promise<number> {
   });
   const taken = new Set(existing.map((row) => row.startsAt.getTime()));
   const fresh = starts.filter((date) => !taken.has(date.getTime()));
-  if (fresh.length === 0) return 0;
+  if (fresh.length === 0) return { created: 0, skipped: starts.length };
 
   const result = await prisma.trainingSlot.createMany({
     data: fresh.map((startsAt) => ({
@@ -411,7 +435,8 @@ export async function createSlots(input: CreateSlotInput): Promise<number> {
       notes: input.notes,
     })),
   });
-  return result.count;
+
+  return { created: result.count, skipped: starts.length - result.count };
 }
 
 /** Seansı iptal eder; kayıtlı sporcuların rezervasyonu da iptal olur

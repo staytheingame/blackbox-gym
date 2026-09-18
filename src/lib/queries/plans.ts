@@ -8,6 +8,7 @@ import type {
   PlanLevel,
 } from "@/domain/plans/template";
 import { logTraining, revertTrainingLog } from "@/lib/queries/performance";
+import { memberWhere, type StaffScope } from "@/lib/auth/scope";
 
 /**
  * Şablon sözlüğü domain katmanında (`domain/plans/template.ts`) — istemci
@@ -491,6 +492,47 @@ export async function copyPlanWeek(
 
   await touchTemplate(templateId);
   return { ok: true };
+}
+
+export type AssignmentTarget = {
+  id: string;
+  fullName: string;
+  memberNo: string;
+  /** Aynı türde yürüyen program — atama bunu kapatacağı için ekranda yazar. */
+  currentPlanName: string | null;
+};
+
+/**
+ * Toplu atama ekranının sporcu listesi: **kapsam içindeki** aktif ve aday
+ * sporcular. Pasif/engelli kayıt listeye girmez — kapanmış bir kayda program
+ * atamak sessiz bir hatadır, seçenek olarak görünmemeli.
+ */
+export async function listAssignmentTargets(
+  scope: StaffScope,
+  kind: PlanKind,
+): Promise<AssignmentTarget[]> {
+  const members = await prisma.member.findMany({
+    where: memberWhere(scope, { status: { in: ["active", "lead"] } }),
+    orderBy: { fullName: "asc" },
+    select: {
+      id: true,
+      fullName: true,
+      memberNo: true,
+      memberPlans: {
+        where: { status: "aktif", template: { kind } },
+        orderBy: { startDate: "desc" },
+        take: 1,
+        select: { template: { select: { name: true } } },
+      },
+    },
+  });
+
+  return members.map((member) => ({
+    id: member.id,
+    fullName: member.fullName,
+    memberNo: member.memberNo,
+    currentPlanName: member.memberPlans[0]?.template.name ?? null,
+  }));
 }
 
 export type AssignPlanResult =

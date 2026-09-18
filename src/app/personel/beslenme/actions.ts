@@ -3,10 +3,16 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getCurrentUser, requireStaff } from "@/lib/auth/guards";
+import {
+  getCurrentUser,
+  requireMemberInScope,
+  requireStaff,
+} from "@/lib/auth/guards";
+import { staffScopeFor } from "@/lib/auth/scope";
 import {
   addFood,
   addMeal,
+  copyPlanToMember,
   createPlan,
   deleteFood,
   deleteMeal,
@@ -245,4 +251,55 @@ export async function deleteFoodAction(
 
   await deleteFood(foodId, membership.organizationId);
   revalidateNutrition(planId);
+}
+
+const copySchema = z.object({
+  planId: z.string().min(1),
+  targetMemberId: z.string().min(1, "Kopyalanacak sporcuyu seç."),
+});
+
+export type CopyPlanState = { error?: string; success?: string };
+
+/**
+ * Planı başka bir sporcuya kopyalar. Kopya **taslak** doğar; antrenör gözden
+ * geçirip yayına alana kadar hedef sporcu görmez (bkz. `copyPlanToMember`).
+ */
+export async function copyPlanAction(
+  _prevState: CopyPlanState,
+  formData: FormData,
+): Promise<CopyPlanState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Oturum açılmamış." };
+  const membership = await requireStaff(user.id).catch(() => null);
+  if (!membership) return { error: "Personel yetkisi gerekli." };
+
+  const parsed = copySchema.safeParse({
+    planId: formData.get("planId"),
+    targetMemberId: formData.get("targetMemberId"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Form geçersiz." };
+  }
+
+  // Kaynak plan da hedef sporcu da kapsam içinde olmalı: antrenör başkasının
+  // sporcusuna plan yazamaz.
+  const scope = staffScopeFor(membership, user.id);
+  const target = await requireMemberInScope(
+    scope,
+    parsed.data.targetMemberId,
+  ).catch(() => null);
+  if (!target) return { error: "Bu sporcu senin sorumluluğunda değil." };
+
+  const result = await copyPlanToMember(
+    parsed.data.planId,
+    membership.organizationId,
+    parsed.data.targetMemberId,
+    user.id,
+  );
+  if (!result.ok) return { error: result.error };
+
+  revalidateNutrition(result.planId, parsed.data.targetMemberId);
+  return {
+    success: `${result.memberName} için taslak kopya oluşturuldu — düzenleyip yayına al.`,
+  };
 }

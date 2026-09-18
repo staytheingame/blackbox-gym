@@ -47,6 +47,7 @@ export async function assignCoachAction(
   });
 
   revalidatePath("/yonetim/uyeler");
+  revalidatePath("/yonetim/kayit-linki");
   revalidatePath("/personel/uyeler");
   return { success: "Atama güncellendi." };
 }

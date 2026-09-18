@@ -3,7 +3,12 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getCurrentUser, requireStaff } from "@/lib/auth/guards";
+import {
+  getCurrentUser,
+  requireMemberInScope,
+  requireStaff,
+} from "@/lib/auth/guards";
+import { staffScopeFor } from "@/lib/auth/scope";
 import {
   PLAN_ITEM_KINDS,
   PLAN_KINDS,
@@ -12,6 +17,7 @@ import {
 import {
   addPlanDay,
   addPlanItem,
+  assignPlanToMember,
   copyPlanWeek,
   createPlanTemplate,
   deletePlanDay,
@@ -369,5 +375,91 @@ export async function copyWeekAction(
   revalidateTemplates(templateId);
   return {
     success: `${fromWeek}. hafta ${toWeek}. haftaya kopyalandı.`,
+  };
+}
+
+// ── Toplu atama ───────────────────────────────────────────────
+
+const bulkAssignSchema = z.object({
+  templateId: z.string().min(1, "Şablon seç."),
+  memberIds: z.array(z.string().min(1)).min(1, "En az bir sporcu seç."),
+});
+
+export type BulkAssignState = { error?: string; success?: string };
+
+/**
+ * Bir şablonu birden çok sporcuya birden atar.
+ *
+ * Neden: aynı programı on kişiye vermek, on kez sporcu kartına girip formu
+ * doldurmak demekti. Grup dersi veren salonda program çoğu zaman ortak; kişiye
+ * özel olan azınlıktır ve o zaten sporcu kartından atanmaya devam eder.
+ *
+ * Kapsam her sporcu için TEK TEK doğrulanır (`requireMemberInScope`): formdan
+ * gelen kimlik listesine güvenilmez, antrenör başkasının sporcusuna program
+ * yazamaz.
+ */
+export async function assignPlanBulkAction(
+  _prevState: BulkAssignState,
+  formData: FormData,
+): Promise<BulkAssignState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Oturum açılmamış." };
+  const membership = await requireStaff(user.id).catch(() => null);
+  if (!membership) return { error: "Personel yetkisi gerekli." };
+
+  const parsed = bulkAssignSchema.safeParse({
+    templateId: formData.get("templateId"),
+    memberIds: formData.getAll("memberIds").map((value) => value.toString()),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Form geçersiz." };
+  }
+
+  const scope = staffScopeFor(membership, user.id);
+
+  let assigned = 0;
+  const failed: string[] = [];
+
+  for (const memberId of parsed.data.memberIds) {
+    const member = await requireMemberInScope(scope, memberId).catch(() => null);
+    if (!member) {
+      failed.push(memberId);
+      continue;
+    }
+
+    const result = await assignPlanToMember(
+      memberId,
+      parsed.data.templateId,
+      user.id,
+    );
+    if (result.ok) {
+      assigned += 1;
+      revalidatePath(`/personel/uyeler/${memberId}`);
+    } else {
+      failed.push(member.fullName);
+    }
+  }
+
+  if (assigned === 0) {
+    return { error: "Hiçbir sporcuya atanamadı. Kapsamını kontrol et." };
+  }
+
+  await recordAudit({
+    organizationId: membership.organizationId,
+    actorUserId: user.id,
+    actorLabel: user.displayName,
+    action: "plan.toplu-atandi",
+    entityType: "PlanTemplate",
+    entityId: parsed.data.templateId,
+    summary: `Şablon ${assigned} sporcuya atandı.`,
+  });
+
+  revalidateTemplates(parsed.data.templateId);
+  revalidatePath("/personel/uyeler");
+
+  return {
+    success:
+      `${assigned} sporcuya atandı.` +
+      (failed.length > 0 ? ` ${failed.length} tanesi atlandı.` : ""),
   };
 }

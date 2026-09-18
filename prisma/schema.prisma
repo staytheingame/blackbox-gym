@@ -62,6 +62,7 @@ model Organization {
   waiverTemplates   WaiverTemplate[]
   auditLogs         AuditLog[]
   staffInvites      StaffInvite[]
+  memberJoinLinks   MemberJoinLink[]
 
   payments           Payment[]
   expenses           Expense[]
@@ -127,6 +128,40 @@ model Member {
   email               String?
   phone               String?
   status              String       @default("active")
+
+  // ── Kişisel bilgiler (kayıt formu) ────────────────────────────
+  // `fullName` ekranlarda kullanılan tek addır; aşağıdaki ayrık alanlar
+  // kayıt formundan gelir ve reklam eşleştirmesinde (Meta gelişmiş eşleşme:
+  // fn/ln/ct/st/zip/country) kullanılır — bkz. src/domain/marketing/meta-matching.ts
+  firstName           String?
+  lastName            String?
+  /// Yaş TUTULMAZ, doğum tarihinden hesaplanır — bir yıl sonra yanlış olmasın.
+  birthDate           DateTime?
+  /// kadin | erkek | belirtmedi
+  gender              String?
+  /// Salon çevresi analizi için en işe yarar alan: İstanbul'da ilçe.
+  district            String?
+  /// Meta `ct`
+  city                String?
+  /// Meta `st` — il/bölge
+  state               String?
+  /// Meta `country` — ISO-3166 alpha-2, küçük harf ("tr")
+  country             String?
+  /// Meta `zip`
+  postalCode          String?
+  emergencyName       String?
+  emergencyPhone      String?
+  /// Sakatlık, ilaç, kronik rahatsızlık — antrenör seans öncesi görür.
+  healthNote          String?
+  /// Sporcu kendi kaydolduysa dolar (tek kayıt linki). Personel eklediyse boş.
+  selfRegisteredAt    DateTime?
+  /// Hangi kayıt linkinden geldi — kanal ölçümü (QR, Instagram, tabela).
+  joinLinkId          String?
+  joinLink            MemberJoinLink? @relation(fields: [joinLinkId], references: [id], onDelete: SetNull)
+  /// KVKK aydınlatma onayı — kayıt formunda zorunlu.
+  kvkkConsentAt       DateTime?
+  /// İletişim/pazarlama izni — ayrı kutu, zorunlu değil.
+  marketingConsentAt  DateTime?
   /// Ders hatırlatmaları kapatılabilir — sporcu profilinden ya da antrenörden.
   remindersEnabled    Boolean      @default(true)
   /// KVKK talebiyle kimlik alanları silindiyse dolar — kayıt istatistik için kalır.
@@ -156,6 +191,8 @@ model Member {
 
   @@unique([organizationId, memberNo])
   @@index([organizationId, assignedCoachUserId])
+  @@index([organizationId, selfRegisteredAt])
+  @@index([joinLinkId])
 }
 
 // status: submitted | reviewed
@@ -525,6 +562,52 @@ model StaffInvite {
 
   @@index([organizationId, status])
   @@index([expiresAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// KAYIT LİNKİ — tek bağlantı, sporcu kendi kaydolur
+//
+// `MemberInvite` KİŞİYE özeldir: personel sporcuyu ekler, tek kullanımlık
+// bağlantı üretir, tek tek gönderir. Bu model onun tersidir — **çoğa açık,
+// paylaşılabilir** bir bağlantı: Instagram biyografisine, WhatsApp durumuna
+// ya da resepsiyondaki QR koda konur, gelen herkes kendi kaydını açar.
+//
+// Token yerine kısa bir `slug` taşır (`/katil/blackbox-qr`): bağlantı sesli
+// olarak söylenebilir, QR'a basılır, afişe yazılır. Tek kullanımlık olmadığı
+// için sır değildir — güvenliği `isActive`, `expiresAt` ve `maxUses` sağlar;
+// kötüye kullanılırsa kapatılır, yeni slug ile yenisi açılır.
+//
+// Kanal ölçümü: her link ayrı satırdır ve kaydolan sporcuda `joinLinkId`
+// kalır — "hangi link kaç üye getirdi" sorusu buradan yanıtlanır.
+// ─────────────────────────────────────────────────────────────
+
+model MemberJoinLink {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// URL'de görünen kısa ad — `/katil/<slug>`. Salonlar arası benzersiz.
+  slug           String       @unique
+  /// Panelde görünen ad: "Resepsiyon QR", "Instagram biyografi".
+  label          String
+  isActive       Boolean      @default(true)
+  /// Bu linkten gelen sporcuların sorumlu antrenörü. Boşsa atanmamış kalır,
+  /// yönetici `/yonetim/uyeler` ekranından dağıtır.
+  defaultCoachUserId String?
+  /// Kaydolan hangi durumda açılsın: lead (aday) | active (üye).
+  defaultStatus  String       @default("lead")
+  /// Kaç kişi kullanabilir — null = sınırsız (kampanya linklerinde sınırlı).
+  maxUses        Int?
+  /// Kaç kişi kullandı. Sayaç kayıt anında artar; satır silinen üyeden
+  /// etkilenmez — "bu link kaç kişiyi getirdi" tarihsel bir sayıdır.
+  usedCount      Int          @default(0)
+  expiresAt      DateTime?
+  createdByUserId String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  members Member[]
+
+  @@index([organizationId, isActive])
 }
 
 // ─────────────────────────────────────────────────────────────

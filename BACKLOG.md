@@ -297,6 +297,68 @@ sporcular ortak tablodan istediğini kapar:
 - Public `/uyelikler` sayfası da ders paketi diliyle güncellendi — vitrin ile
   panel aynı modeli anlatsın.
 
+## Yapıldı (Faz 14 — takvimden toplu saat açma, tek kayıt linki, reklam eşleşmesi)
+
+**Sorun:** üç iş de "tek tek" yapılıyordu. Antrenör saatleri birer birer
+açıyordu (yirmi saatlik hafta = yirmi tur), sporcu eklemek için her kişiye ayrı
+davet bağlantısı üretilip elden gönderiliyordu, aynı programı on sporcuya
+vermek on tur sürüyordu. Dar ekranda ise takvim büsbütün gizleniyordu.
+
+### Takvim: dokun, biriktir, bir kere aç
+- `src/components/panel/WeekBoard.tsx` — `WeekCalendar`ın yerini aldı.
+  Boş hücreye dokununca seçim birikiyor, "Saatleri Aç" hepsini tek işlemde
+  açıyor. Gün başlığı o günün tüm boş saatlerini, saat etiketi o saati tüm
+  günlerde seçiyor ("her akşam 19:00" iki dokunuş).
+- Saf kısmı `src/components/panel/calendar-grid.ts`te (tipler, gün/saat
+  pencereleri) — gün anahtarları salon saat diliminde SUNUCUDA üretiliyor.
+- **Mobilde gerçek takvim:** 7 sütun 375px'e sığmadığı için dar ekranda tek
+  gün sütunu + üstte gün şeridi var. Seçim iki düzende ortak. Sporcu
+  tarafında boş bir günde on üç boş satır yerine tek satırlık açıklama çıkıyor.
+- `createSlots` artık saat LİSTESİ alıyor (`starts: Date[]`), çakışanları
+  atlayıp `{ created, skipped }` döndürüyor — bir saat çakıştı diye ötekiler
+  düşmüyor. `startMinute` alanıyla seçilen tüm saatler :00/:15/:30/:45
+  başlayabiliyor.
+- Hücre içi "Kaldır" düğmesi `formAction` ile yazıldı: ızgara bir formun
+  içinde ve HTML iç içe form kabul etmiyor.
+
+### Tek kayıt linki — sporcu kendi kaydolur
+- Yeni model `MemberJoinLink` + genel sayfa `/katil/<slug>`: bağlantı çoğa
+  açık, Instagram biyografisine/QR koda konur. Gelen kişi bilgilerini yazar,
+  şifresini kendi kurar, hesabı anında açılır ve oturumu başlar.
+- Kişiye özel davet (`MemberInvite`) duruyor — tanıdık birini elle eklemenin
+  hâlâ en hızlı yolu.
+- Yönetim ekranı `/yonetim/kayit-linki`: bağlantı üret/kapat, gelenler kime
+  atansın, kayıt durumu (aday/üye), kontenjan, son gün. Her kanal ayrı link
+  → "hangi link kaç üye getirdi" ölçülüyor (`Member.joinLinkId`).
+- Antrenör de paylaşabilsin diye açık bağlantılar `/personel/davetler`
+  ekranında kopyalanabilir olarak duruyor (üretmek/kapatmak yönetici işi).
+- Kayıt bu yoldan gelenler varsayılan olarak **aday**: ders hakkı ve üyelik
+  personel eliyle başlar, sahte kayıt panelin içini karıştırmaz.
+
+### Kişisel bilgiler ve reklam eşleşmesi
+- `Member`a ad/soyad (ayrık), doğum tarihi, cinsiyet, ilçe/şehir/il/ülke/posta
+  kodu, acil durum kişisi, sağlık notu, KVKK ve iletişim izni alanları eklendi
+  (migration `20260918090000_kayit_linki_ve_kisisel_bilgiler`).
+- Sporcu kendi bilgilerini `/uye/profil`den günceller; eksik alanlar orada
+  listelenir. Antrenör aynı bilgileri sporcu kartında görür (sağlık notu
+  vurgulu). Yazma yolu tek: `src/lib/queries/member-profile.ts`.
+- `src/domain/marketing/meta-matching.ts` — üye verisini Meta'nın müşteri
+  listesi biçimine çevirir (email, phone, fn, ln, ct, st, country, zip, dob,
+  ge). Telefon ülke koduyla normalleşir, ülke ISO-2'ye düşer.
+- `/api/export/reklam-eslesme` bu listeyi **virgül ayraçlı, BOM'suz** CSV
+  verir (Meta böyle bekliyor; Türkçe Excel dosyaları noktalı virgüllü kalır).
+  Hash uygulanmaz — Meta dosyayı tarayıcıda kendi SHA-256'lar ve
+  normalleştirmeyi de kendi yapar, bizim hash'imiz eşleşmeyi sessizce düşürür.
+- E-postası ve telefonu olmayan satır dosyaya girmez; eşleşmeye yetmez.
+
+### Program ve beslenme ataması
+- `/personel/planlar` → "Toplu Ata": bir şablon, işaretlenen sporcuların
+  hepsine. Kapsam her sporcu için ayrı doğrulanır. Kişiye özel atama sporcu
+  kartından yapılmaya devam eder.
+- `/personel/beslenme/<id>` → "Başka Sporcuya Kopyala": plan öğünleri ve
+  besinleriyle kopyalanır, kopya **taslak** doğar (yanlış kalori yayına
+  düşmesin). Öğün işaretleri kopyalanmaz.
+
 ## Yapıldı (Faz 12 — koç kapsamı, tahsilat ve salon muhasebesi)
 
 Kullanıcı isteği: **"koç ekleme-üye ekleme, her koçun kendi üyesini görmesi

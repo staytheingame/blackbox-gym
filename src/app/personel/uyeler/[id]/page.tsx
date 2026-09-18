@@ -32,6 +32,8 @@ import { ProgressPanel } from "@/components/panel/ProgressPanel";
 import { getMemberRankState } from "@/lib/queries/ranks";
 import { getMemberWaivers } from "@/lib/queries/waivers";
 import { getMemberFinance } from "@/lib/queries/finance";
+import { getMemberPersonalInfo } from "@/lib/queries/member-profile";
+import { ageFrom } from "@/domain/marketing/meta-matching";
 import { PAYMENT_METHOD_LABEL } from "@/domain/finance/ledger";
 import { summarizeDue, DUE_STATUS_LABEL } from "@/domain/finance/dues";
 import { formatMinorTR } from "@/domain/finance/money";
@@ -92,6 +94,7 @@ export default async function StaffMemberDetailPage({
     rankState,
     waivers,
     finance,
+    personal,
   ] = await Promise.all([
     listPlanTemplates(membership.organizationId),
     getActiveMemberPlan(member.id, "antrenman"),
@@ -104,6 +107,7 @@ export default async function StaffMemberDetailPage({
     getMemberRankState(member.id, membership.organizationId),
     getMemberWaivers(member.id, membership.organizationId),
     getMemberFinance(member.id),
+    getMemberPersonalInfo(member.id),
   ]);
 
   // Beyanında "evet" işaretlenmiş maddeler — yüklenme kararından ÖNCE görülmeli.
@@ -187,6 +191,64 @@ export default async function StaffMemberDetailPage({
             </Pill>
           ))}
         </div>
+      )}
+
+      {personal && (
+        <PanelCard
+          title="Kişisel Bilgiler"
+          description={
+            personal.missing.length > 0
+              ? `Eksik: ${personal.missing.join(", ")}. Sporcu kendi profilinden doldurabilir.`
+              : "Sporcunun kendi girdiği bilgiler. Sağlık notunu seans öncesi oku."
+          }
+        >
+          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            {[
+              { label: "Telefon", value: personal.phone },
+              { label: "E-posta", value: personal.email ?? "" },
+              {
+                label: "Yaş",
+                value: (() => {
+                  const age = ageFrom(
+                    personal.birthDate ? new Date(personal.birthDate) : null,
+                  );
+                  return age === null ? "" : `${age}`;
+                })(),
+              },
+              {
+                label: "Yaşadığı yer",
+                value: [personal.district, personal.city]
+                  .filter(Boolean)
+                  .join(" · "),
+              },
+              {
+                label: "Acil durum",
+                value: [personal.emergencyName, personal.emergencyPhone]
+                  .filter(Boolean)
+                  .join(" · "),
+              },
+              { label: "Posta kodu", value: personal.postalCode ?? "" },
+            ].map((row) => (
+              <div key={row.label} className="flex items-baseline gap-2">
+                <dt className="w-28 shrink-0 text-xs font-bold uppercase tracking-wide text-brand-muted">
+                  {row.label}
+                </dt>
+                <dd className="text-sm text-brand-white">
+                  {row.value || <span className="text-brand-muted">—</span>}
+                </dd>
+              </div>
+            ))}
+          </dl>
+
+          {personal.healthNote && (
+            <p className="mt-4 rounded-sm border border-brand-yellow/40 bg-brand-yellow/10 p-3 text-sm leading-relaxed text-brand-white">
+              <span className="font-bold uppercase tracking-wide text-brand-yellow">
+                Sağlık notu:
+              </span>{" "}
+              {personal.healthNote}
+            </p>
+          )}
+        </PanelCard>
       )}
 
       <ProgressPanel

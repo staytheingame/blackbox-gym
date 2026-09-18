@@ -15,6 +15,7 @@ import {
   countPendingWaiversForMember,
 } from "@/lib/queries/waivers";
 import { countRankReady } from "@/lib/queries/ranks";
+import { countUnassignedSelfRegistered } from "@/lib/queries/join-links";
 
 export type NavBadges = Partial<Record<BadgeKey, number>>;
 
@@ -87,10 +88,12 @@ export async function fetchAdminBadges(
   organizationId: string,
   userId: string,
 ): Promise<NavBadges> {
-  const [pendingInvites, unreadNotifications] = await Promise.all([
-    countPendingInvites(organizationScope(organizationId)),
-    countUnread(userId),
-  ]);
+  const [pendingInvites, unreadNotifications, unassignedRegistrations] =
+    await Promise.all([
+      countPendingInvites(organizationScope(organizationId)),
+      countUnread(userId),
+      countUnassignedSelfRegistered(organizationId),
+    ]);
 
-  return { pendingInvites, unreadNotifications };
+  return { pendingInvites, unreadNotifications, unassignedRegistrations };
 }

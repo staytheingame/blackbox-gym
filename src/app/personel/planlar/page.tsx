@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, requireStaff } from "@/lib/auth/guards";
-import { listPlanTemplates } from "@/lib/queries/plans";
+import {
+  listAssignmentTargets,
+  listPlanTemplates,
+} from "@/lib/queries/plans";
+import { staffScopeFor } from "@/lib/auth/scope";
 import {
   PLAN_LEVEL_LABEL,
   type PlanKind,
@@ -15,6 +19,7 @@ import {
   StatCard,
 } from "@/components/panel/ui";
 import { TemplateForm } from "./TemplateForm";
+import { BulkAssignForm } from "./BulkAssignForm";
 
 export const metadata: Metadata = { title: "Planlar — BlackBox Panel" };
 
@@ -44,7 +49,10 @@ export default async function StaffPlansPage({
   const rawKind = typeof params.tur === "string" ? params.tur : "antrenman";
   const kind: PlanKind = rawKind === "kondisyon" ? "kondisyon" : "antrenman";
 
-  const templates = await listPlanTemplates(membership.organizationId, kind);
+  const [templates, assignTargets] = await Promise.all([
+    listPlanTemplates(membership.organizationId, kind),
+    listAssignmentTargets(staffScopeFor(membership, user.id), kind),
+  ]);
   const copy = KIND_TITLE[kind];
   const active = templates.filter((template) => template.isActive);
 
@@ -80,6 +88,20 @@ export default async function StaffPlansPage({
         description="Künyeyi kaydettikten sonra günleri ve hareketleri şablon sayfasında yazacaksın."
       >
         <TemplateForm />
+      </PanelCard>
+
+      <PanelCard
+        title="Toplu Ata"
+        description="Aynı programı bir grubun tamamına ver. Kişiye özel atama sporcu kartından yapılmaya devam eder."
+      >
+        <BulkAssignForm
+          templates={active.map((template) => ({
+            id: template.id,
+            name: template.name,
+            weeks: template.weeks,
+          }))}
+          members={assignTargets}
+        />
       </PanelCard>
 
       <PanelCard title={`Şablonlar (${templates.length})`}>

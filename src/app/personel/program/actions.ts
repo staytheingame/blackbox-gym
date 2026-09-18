@@ -37,9 +37,13 @@ function revalidateProgram(): void {
   revalidatePath("/personel/bildirimler");
 }
 
+/** Takvimden gelen seçim: "2026-09-18|19,2026-09-19|20" */
+const SELECTION_CELL = /^(\d{4}-\d{2}-\d{2})\|([01]\d|2[0-3])$/;
+
 const createSchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tarih seçilmedi."),
-  time: z.string().regex(/^\d{2}:\d{2}$/, "Saat seçilmedi."),
+  cells: z.string().min(1, "Takvimden en az bir saat seç."),
+  /** Seçilen saat bandının kaçıncı dakikasında başlasın: 0 | 15 | 30 | 45. */
+  startMinute: z.coerce.number().int().min(0).max(45),
   durationMinutes: z.coerce.number().int().min(15).max(240),
   capacity: z.coerce.number().int().min(1).max(20),
   kind: z.enum(SLOT_KINDS),
@@ -50,7 +54,18 @@ const createSchema = z.object({
 
 export type SlotFormState = { error?: string; success?: string };
 
-/** Antrenör boş saat açar; `repeatWeeks > 1` ise aynı saat haftalarca tekrarlar. */
+/** Aynı sonucu iki farklı sayı için Türkçe yazmak — "1 saat" / "12 saat". */
+function plural(count: number, word: string): string {
+  return `${count} ${word}`;
+}
+
+/**
+ * Antrenör takvimde seçtiği boş saatleri açar.
+ *
+ * Tek saatlik eski form yerine çoklu seçim: gelen `cells` alanı takvimde
+ * dokunulan hücrelerin listesidir. `repeatWeeks > 1` ise seçilen her saat
+ * haftalık olarak tekrarlanır — "her akşam 19:00, 4 hafta" tek işlemdir.
+ */
 export async function createSlotAction(
   _prevState: SlotFormState,
   formData: FormData,
@@ -61,8 +76,8 @@ export async function createSlotAction(
   if (!membership) return { error: "Personel yetkisi gerekli." };
 
   const parsed = createSchema.safeParse({
-    date: formData.get("date"),
-    time: formData.get("time"),
+    cells: formData.get("cells"),
+    startMinute: formData.get("startMinute") ?? 0,
     durationMinutes: formData.get("durationMinutes"),
     capacity: formData.get("capacity"),
     kind: formData.get("kind"),
@@ -74,15 +89,38 @@ export async function createSlotAction(
     return { error: parsed.error.issues[0]?.message ?? "Form geçersiz." };
   }
 
-  const startsAt = gymDateTimeToInstant(parsed.data.date, parsed.data.time);
-  if (startsAt.getTime() < Date.now()) {
-    return { error: "Geçmiş bir saate seans açılamaz." };
+  const minute = String(parsed.data.startMinute).padStart(2, "0");
+  const now = Date.now();
+  const starts: Date[] = [];
+  let pastCount = 0;
+
+  for (const raw of parsed.data.cells.split(",")) {
+    const match = SELECTION_CELL.exec(raw.trim());
+    if (!match) continue;
+
+    const startsAt = gymDateTimeToInstant(match[1], `${match[2]}:${minute}`);
+    // Geçmiş saat sessizce atlanır: hafta ortasında seçim yapan antrenör
+    // sabahın saatlerini de boyamış olabilir, tüm işlemi düşürmek anlamsız.
+    if (startsAt.getTime() < now) {
+      pastCount += 1;
+      continue;
+    }
+    starts.push(startsAt);
   }
 
-  const created = await createSlots({
+  if (starts.length === 0) {
+    return {
+      error:
+        pastCount > 0
+          ? "Seçilen saatlerin tamamı geçmişte. İleri bir saat seç."
+          : "Takvimden en az bir boş saat seç.",
+    };
+  }
+
+  const { created, skipped } = await createSlots({
     organizationId: membership.organizationId,
     coachUserId: user.id,
-    startsAt,
+    starts,
     durationMinutes: parsed.data.durationMinutes,
     capacity: parsed.data.capacity,
     kind: parsed.data.kind,
@@ -92,7 +130,7 @@ export async function createSlotAction(
   });
 
   if (created === 0) {
-    return { error: "Bu saatler zaten açık — yeni kayıt oluşmadı." };
+    return { error: "Seçilen saatler zaten açık — yeni kayıt oluşmadı." };
   }
 
   await recordAudit({
@@ -101,15 +139,20 @@ export async function createSlotAction(
     actorLabel: user.displayName,
     action: "seans.acildi",
     entityType: "TrainingSlot",
-    summary: `${formatDateTimeTR(startsAt)} · ${created} seans açıldı (${parsed.data.kind}).`,
+    summary: `${formatDateTimeTR(starts[0])} ve sonrası · ${created} seans açıldı (${parsed.data.kind}).`,
   });
 
   revalidateProgram();
+
+  const notes = [
+    skipped > 0 ? `${plural(skipped, "saat")} zaten açıktı` : null,
+    pastCount > 0 ? `${plural(pastCount, "geçmiş saat")} atlandı` : null,
+  ].filter(Boolean);
+
   return {
     success:
-      created === 1
-        ? "Saat açıldı."
-        : `${created} hafta için saat açıldı.`,
+      `${plural(created, "seans")} açıldı` +
+      (notes.length > 0 ? ` · ${notes.join(", ")}.` : "."),
   };
 }
 

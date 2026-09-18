@@ -522,3 +522,93 @@ export async function toggleMealCheck(
   await prisma.mealCheck.create({ data: { memberId, mealId, logDate } });
   return { checked: true };
 }
+
+// ── Planı başka sporcuya kopyala ──────────────────────────────
+
+export type CopyPlanResult =
+  | { ok: true; planId: string; memberName: string }
+  | { ok: false; error: string };
+
+/**
+ * Var olan bir beslenme planını başka bir sporcuya kopyalar — öğünleriyle ve
+ * besinleriyle birlikte.
+ *
+ * Neden ayrı bir "şablon" modeli yok: beslenme planı kişiye özeldir, ama
+ * salonda yazılan planların çoğu birbirinin türevidir ("kilo verme 1800 kcal",
+ * "sıklet düşüşü son hafta"). İyi yazılmış bir planı kopyalayıp üstünde
+ * oynamak, her sporcu için sıfırdan öğün yazmaktan kat kat hızlıdır ve yeni
+ * bir veri modeli getirmez.
+ *
+ * Kopya **taslak** doğar: hedef sporcu, antrenör üzerinden geçip yayına
+ * almadan planı görmemeli — başkasının kalorisi yanlışlıkla yayına düşmesin.
+ * Öğün işaretleri (`MealCheck`) kopyalanmaz; onlar sporcunun kendi geçmişidir.
+ */
+export async function copyPlanToMember(
+  planId: string,
+  organizationId: string,
+  targetMemberId: string,
+  createdByUserId: string,
+): Promise<CopyPlanResult> {
+  const source = await prisma.nutritionPlan.findFirst({
+    where: { id: planId, organizationId },
+    include: {
+      meals: {
+        orderBy: { position: "asc" },
+        include: { foods: { orderBy: { position: "asc" } } },
+      },
+    },
+  });
+  if (!source) return { ok: false, error: "Plan bulunamadı." };
+
+  const target = await prisma.member.findFirst({
+    where: { id: targetMemberId, organizationId },
+    select: { id: true, fullName: true },
+  });
+  if (!target) return { ok: false, error: "Sporcu bulunamadı." };
+  if (target.id === source.memberId) {
+    return { ok: false, error: "Plan zaten bu sporcuda." };
+  }
+
+  const created = await prisma.nutritionPlan.create({
+    data: {
+      organizationId,
+      memberId: target.id,
+      title: source.title,
+      goal: source.goal,
+      status: "taslak",
+      startDate: null,
+      dailyCalories: source.dailyCalories,
+      proteinG: source.proteinG,
+      carbsG: source.carbsG,
+      fatG: source.fatG,
+      notes: source.notes,
+      dayType: source.dayType,
+      weekDaysCsv: source.weekDaysCsv,
+      createdByUserId,
+      meals: {
+        create: source.meals.map((meal) => ({
+          position: meal.position,
+          title: meal.title,
+          timeLabel: meal.timeLabel,
+          notes: meal.notes,
+          foods: {
+            create: meal.foods.map((food) => ({
+              position: food.position,
+              name: food.name,
+              amount: food.amount,
+              calories: food.calories,
+              proteinG: food.proteinG,
+              carbsG: food.carbsG,
+              fatG: food.fatG,
+              alternatives: food.alternatives,
+              notes: food.notes,
+            })),
+          },
+        })),
+      },
+    },
+    select: { id: true },
+  });
+
+  return { ok: true, planId: created.id, memberName: target.fullName };
+}
