@@ -412,3 +412,46 @@ bağlantısından şifresini kur.
 - [ ] Yönetici bağlantısı tek kullanımdan sonra "Kontenjan doldu" diyor.
 - [ ] Yönetici olmayan biri bağlantı üretemiyor.
 - [ ] Faz 16'da üretilmiş bağlantılar (rol sütunu öncesi) antrenör olarak çalışıyor.
+
+## Faz 19 — sade koç ana sayfası, sil/düzenle, test hesapları
+
+### Koç ana sayfası (`/personel`)
+- [ ] Yalnızca iki kart var: **Bugünün Dersleri** ve **Haftalık Shift**. Sayaç
+      kartları, İnceleme Kuyruğu, son hareketler YOK.
+- [ ] Bugünün Dersleri: saat, ders türü, sporcu adları ve her sporcunun yanında
+      **"N ders kaldı" / "Sınırsız" / "Paket yok"**. Kalan ≤ 2 ya da paketi yoksa
+      kırmızı.
+- [ ] Yoklaması alınmamış geçmiş seansta "Yoklama bekliyor" rozeti; kart başlığındaki
+      bağlantı bekleyen sayısını gösteriyor ve yoklama ekranına gidiyor.
+- [ ] Haftalık Shift: Pazartesi'den Pazar'a yedi gün; bugün sarı işaretli; bitişik
+      saatler tek aralıkta ("10:00–13:00 · 2/3"), öğle arası ayrı aralık; seansı
+      olmayan gün "Shift yok".
+- [ ] Antrenör yalnız KENDİ dersleri/shift'ini görüyor; yönetici hepsini.
+- [ ] Menüde **Kamp Protokolleri** ve **Kuşaklar** yok; sporcu kartında ve sporcu
+      ana sayfasında kuşak kartı çıkmıyor.
+
+### Sporcu düzenle / sil
+- [ ] `/personel/uyeler` satırlarında **Düzenle**; yönetici hesabında ayrıca **Sil**.
+      Antrenör hesabında Sil YOK.
+- [ ] Sporcu kartında "Bilgileri Düzenle": ad, telefon, e-posta, durum kaydediliyor.
+      E-posta değişince sporcunun **giriş adresi de** değişiyor; başka hesapta
+      kullanılan e-posta reddediliyor.
+- [ ] Antrenör başkasının sporcusunu düzenleyemiyor (kapsam hatası).
+- [ ] Sil: onay penceresi çıkıyor; İptal'e basınca hiçbir şey olmuyor; onaylayınca
+      sporcu ve giriş hesabı gidiyor, aynı e-postayla yeniden kayıt olunabiliyor.
+- [ ] **Tahsilat kaydı olan sporcu silinmiyor**; açıklama "Pasif yap" diyor.
+- [ ] Denetim kaydında "Sporcu bilgileri düzenlendi" / "Sporcu silindi" satırları var.
+
+### Kadro düzenle / sil (`/yonetim/kadro`)
+- [ ] Her satırda "Düzenle — ad ve e-posta" bölümü (ad soyad düzeltme dahil) ve **Sil**.
+- [ ] Kendi satırında Sil YOK; son aktif yönetici silinemiyor.
+- [ ] Hakediş/ödeme kaydı olan ya da sporcusu olan seansı bulunan antrenör
+      silinmiyor; açıklama "Hesabı Kapat" diyor.
+- [ ] Hiç işlem görmemiş antrenör siliniyor; sahipsiz açık saatleri de temizleniyor,
+      ona atanmış sporcular antrenörsüz (havuzda) kalıyor.
+
+### Test hesapları
+- [ ] `test.uye1..3@blackbox.test` / `Deneme2026!` ile giriş yapılıyor, sporcu paneli açılıyor.
+- [ ] Salonda satıştaki paket varsa üyelerde 0 TL'lik aktif deneme aboneliği var
+      (kalan ders görünüyor); paket yoksa "Yürürlükte üyeliğin yok" diyor.
+- [ ] Yönetici hesabıyla üçü de silinebiliyor (tahsilatları yok).

@@ -828,11 +828,13 @@ export const NAVIGATION: PanelNavItem[] = [
  */
 export const DEFAULT_FEATURE_FLAGS: Record<FeatureFlag, boolean> = {
   mesajlar: true,
-  protokoller: true,
-  // Kuşak merdiveni her salonda anlamlı değil (yalnız boks çalışan salon
-  // derece vermeyebilir); onam formları ise hukuki bir gerek olduğu için
-  // varsayılan açık. İkisi de bölüm bazında kapatılabilir.
-  kusaklar: true,
+  // Kamp protokolleri ve kuşak merdiveni şimdilik KAPALI: panel sade kalsın,
+  // antrenör yalnız ders/üye/takip işlerini görsün. Rotalar ve veri silinmedi;
+  // geri açmak için Vercel ortam değişkeni yeterli
+  // (NEXT_PUBLIC_FEATURE_PROTOKOLLER=true, NEXT_PUBLIC_FEATURE_KUSAKLAR=true).
+  protokoller: false,
+  kusaklar: false,
+  // Onam formları hukuki bir gerek olduğu için varsayılan açık.
   onaylar: true,
 };
 

@@ -506,6 +506,44 @@ bağlantıları tek tek üretilip ayrı ayrı toplanıyordu.
 - Bağlantılar veritabanına yazıldığı için bu ortamdan üretilemez; yöneticinin
   panelde bir kez basması gerekir.
 
+## Yapıldı (Faz 19 — sade koç ana sayfası, sil/düzenle, test hesapları)
+
+**Sorun:** Koç ana sayfası (`/personel`) sayaç kartları ve inceleme kuyruğuyla
+doluydu; koç yalnız "bugün kimin dersi var, kaç dersi kaldı" ve "bu hafta shift'im"
+görmek istiyor. Kamp protokolleri ve kuşak gibi bölümler şimdilik gereksiz. Kadro
+ve sporcu listelerinde düzenle/sil yoktu; deneme hesapları temizlenemiyordu.
+
+### Koç ana sayfası
+- `/personel` yalnız **Bugünün Dersleri** (saat, tür, sporcular, her birinin kalan
+  dersi — `DayRosterMember.hasPackage` ile "Sınırsız" ve "Paket yok" ayrıldı) ve
+  **Haftalık Shift**. Yoklama bekleyen sayısı yalnız küçük bir bağlantı olarak
+  kaldı: "gelmeyen ders yanar" kuralı yoklamaya bağlı.
+- Shift: `domain/coaching/week-shift.ts` bitişik/üst üste binen seansları tek
+  çalışma aralığında birleştirir (10:00–13:00), boşluk = ayrı aralık, iptal
+  edilen seans girmez; gün anahtarı salon saatiyle. 10 test.
+- Kamp Protokolleri ve Kuşaklar varsayılan **kapalı** (`DEFAULT_FEATURE_FLAGS`);
+  sporcu kartındaki ve sporcu ana sayfasındaki kuşak kartı da bayrağa bağlandı.
+  Rota ve veri silinmedi; geri açmak: `NEXT_PUBLIC_FEATURE_PROTOKOLLER=true`,
+  `NEXT_PUBLIC_FEATURE_KUSAKLAR=true` (build'de gömülür → yeniden deploy).
+
+### Düzenle / sil
+- Sporcu: `/personel/uyeler` ve sporcu kartında **Düzenle** (ad, telefon, e-posta,
+  durum; e-posta ve ad giriş hesabıyla senkron). **Sil yalnız yönetici**.
+- Kadro: `/yonetim/kadro` satırında ad/e-posta düzenleme ve **Sil** (yalnız yönetici).
+- **Silme kuralları** (`domain/admin/deletion.ts`, testli): veritabanı sporcuyla
+  birlikte tahsilatı, antrenörle birlikte hakedişi ZİNCİRLEME siler; bu yüzden
+  tahsilatı olan sporcu, hakediş/ödemesi olan ya da sporcusu olan seansı bulunan
+  antrenör, kendin ve son aktif yönetici SİLİNMEZ — hata metni "Pasif yap / Hesabı
+  Kapat" yolunu gösterir. Silinen kişinin giriş hesabı da gider (aynı e-posta
+  yeniden kayıt olabilir); ayrıca antrenör/yönetici olan bir hesabın giriş hesabına
+  sporcu kaydı silinirken dokunulmaz.
+- `ConfirmActionButton`: tarayıcı onayı + sunucu hatasını uyarı olarak gösterir.
+- Denetim kaydı: `uye.duzenlendi`, `uye.silindi`, `personel.duzenlendi`, `personel.silindi`.
+
+### Açık
+- Silme geri alınamaz (yalnız onay penceresi var); toplu silme yok.
+- "Pasif yap" sporcu düzenle formunda; kadroda karşılığı mevcut "Hesabı Kapat".
+
 ## Yapıldı (Faz 12 — koç kapsamı, tahsilat ve salon muhasebesi)
 
 Kullanıcı isteği: **"koç ekleme-üye ekleme, her koçun kendi üyesini görmesi

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireAdmin } from "@/lib/auth/guards";
 import { changeStaffRole, setStaffStatus } from "@/lib/queries/admin";
+import { deleteStaff, updateStaffProfile } from "@/lib/queries/manage";
 import {
   createStaffInvite,
   reissueStaffInvite,
@@ -284,4 +285,87 @@ export async function saveCompensationAction(
   revalidatePath("/yonetim/kadro");
   revalidatePath("/yonetim/muhasebe/hakedis");
   return { success: "Hakediş ayarı kaydedildi." };
+}
+
+const editStaffSchema = z.object({
+  organizationUserId: z.string().min(1),
+  fullName: z.string().trim().min(2, "Ad soyad gerekli.").max(80),
+  email: z.string().trim().toLowerCase().email("Geçerli bir e-posta yaz."),
+});
+
+/** Antrenör/yönetici adını ve giriş e-postasını düzenler — yalnız yönetici. */
+export async function updateStaffAction(
+  _prevState: StaffFormState,
+  formData: FormData,
+): Promise<StaffFormState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Oturum açılmamış." };
+  const membership = await requireAdmin(user.id).catch(() => null);
+  if (!membership) return { error: "Yönetici yetkisi gerekli." };
+
+  const parsed = editStaffSchema.safeParse({
+    organizationUserId: formData.get("organizationUserId"),
+    fullName: formData.get("fullName"),
+    email: formData.get("email"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Form geçersiz." };
+  }
+
+  const result = await updateStaffProfile(
+    parsed.data.organizationUserId,
+    membership.organizationId,
+    { fullName: parsed.data.fullName, email: parsed.data.email },
+  );
+  if (!result.ok) return { error: result.error };
+
+  await recordAudit({
+    organizationId: membership.organizationId,
+    actorUserId: user.id,
+    actorLabel: user.displayName,
+    action: "personel.duzenlendi",
+    entityType: "OrganizationUser",
+    entityId: parsed.data.organizationUserId,
+    summary: `${result.fullName} kadro bilgileri düzenlendi.`,
+  });
+
+  revalidatePath("/yonetim/kadro");
+  revalidatePath("/yonetim");
+  return { success: "Bilgiler kaydedildi." };
+}
+
+/**
+ * Kadro kaydını kalıcı siler — yalnız yönetici. Kendini, son aktif yöneticiyi,
+ * hakediş/ödeme kaydı olanı ve sporcu kaydı olan seansı bulunanı silemez;
+ * hata metni "hesabı kapat" yolunu gösterir.
+ */
+export async function deleteStaffAction(
+  organizationUserId: string,
+): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Oturum açılmamış." };
+  const membership = await requireAdmin(user.id).catch(() => null);
+  if (!membership) return { error: "Yönetici yetkisi gerekli." };
+
+  const result = await deleteStaff(
+    organizationUserId,
+    membership.organizationId,
+    user.id,
+  );
+  if (!result.ok) return { error: result.error };
+
+  await recordAudit({
+    organizationId: membership.organizationId,
+    actorUserId: user.id,
+    actorLabel: user.displayName,
+    action: "personel.silindi",
+    entityType: "OrganizationUser",
+    entityId: organizationUserId,
+    summary: `${result.fullName} kadrodan silindi.`,
+  });
+
+  revalidatePath("/yonetim/kadro");
+  revalidatePath("/yonetim");
+  revalidatePath("/yonetim/kayit-linki");
+  return {};
 }

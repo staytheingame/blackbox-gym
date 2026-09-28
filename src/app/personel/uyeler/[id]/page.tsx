@@ -30,10 +30,16 @@ import {
 import { summarizeProgress } from "@/domain/performance/progress";
 import { ProgressPanel } from "@/components/panel/ProgressPanel";
 import { getMemberRankState } from "@/lib/queries/ranks";
+import { enabledFeatureFlags } from "@/config/feature-flags";
 import { getMemberWaivers } from "@/lib/queries/waivers";
 import { getMemberFinance } from "@/lib/queries/finance";
 import { getMemberPersonalInfo } from "@/lib/queries/member-profile";
 import { getRegistrationAnswers } from "@/lib/queries/join-links";
+import { EditMemberForm } from "./EditMemberForm";
+import { deleteMemberAction } from "./manage-actions";
+import { ConfirmActionButton } from "@/components/panel/ConfirmActionButton";
+import { memberDeleteConfirmText } from "@/domain/admin/deletion";
+import { dangerButtonClass } from "@/components/panel/form";
 import {
   dailyLoadLabel,
   preferredTimeLabel,
@@ -257,6 +263,37 @@ export default async function StaffMemberDetailPage({
           )}
         </PanelCard>
       )}
+
+      <PanelCard
+        title="Bilgileri Düzenle"
+        description="Ad, telefon, e-posta ve durum. Hesabı varsa giriş adresi de bununla değişir."
+      >
+        <div id="duzenle">
+          <EditMemberForm
+            memberId={member.id}
+            fullName={member.fullName}
+            phone={member.phone}
+            email={member.email}
+            status={member.status}
+          />
+        </div>
+
+        {membership.role === "admin" && (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-brand-border pt-4">
+            <p className="max-w-md text-xs leading-relaxed text-brand-muted">
+              Sporcuyu kalıcı siler (hesabı ve tüm kayıtları). Tahsilat kaydı
+              olan sporcu silinmez — onu &quot;Pasif&quot; yap.
+            </p>
+            <ConfirmActionButton
+              action={deleteMemberAction.bind(null, member.id)}
+              confirmText={memberDeleteConfirmText(member.fullName)}
+              className={dangerButtonClass}
+            >
+              Sporcuyu Sil
+            </ConfirmActionButton>
+          </div>
+        )}
+      </PanelCard>
 
       {registrationAnswers && (
         <PanelCard
@@ -527,7 +564,8 @@ export default async function StaffMemberDetailPage({
         </PanelCard>
       )}
 
-      {rankState && (
+      {/* Kuşak bölümü kapalıysa (varsayılan) sporcu kartında da görünmez. */}
+      {enabledFeatureFlags().has("kusaklar") && rankState && (
         <PanelCard
           title="Kuşak"
           description={

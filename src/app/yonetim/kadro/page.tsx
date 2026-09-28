@@ -17,8 +17,15 @@ import {
 import { AddStaffForm } from "./AddStaffForm";
 import { PendingInviteRow } from "./PendingInviteRow";
 import { CompensationForm } from "./CompensationForm";
-import { changeRoleAction, setStatusAction } from "./actions";
-import { rowButtonClass } from "@/components/panel/form";
+import {
+  changeRoleAction,
+  deleteStaffAction,
+  setStatusAction,
+} from "./actions";
+import { EditStaffForm } from "./EditStaffForm";
+import { ConfirmActionButton } from "@/components/panel/ConfirmActionButton";
+import { staffDeleteConfirmText } from "@/domain/admin/deletion";
+import { dangerButtonClass, rowButtonClass } from "@/components/panel/form";
 
 /** Kuruş → form alanında görünecek lira metni ("" = boş bırakılmış). */
 function minorToInput(value: number | null): string {
@@ -138,6 +145,15 @@ export default async function AdminStaffPage() {
                           </button>
                         </form>
                       )}
+                      {!isSelf && (
+                        <ConfirmActionButton
+                          action={deleteStaffAction.bind(null, row.organizationUserId)}
+                          confirmText={staffDeleteConfirmText(row.displayName)}
+                          className={dangerButtonClass}
+                        >
+                          Sil
+                        </ConfirmActionButton>
+                      )}
                     </div>
                   </div>
 
@@ -147,6 +163,19 @@ export default async function AdminStaffPage() {
                       {ORG_ROLE_LABEL[row.role]}
                     </Pill>
                   </div>
+
+                  <details className="w-full rounded-sm border border-brand-border bg-brand-surface-2 p-4">
+                    <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-brand-yellow">
+                      Düzenle — ad ve e-posta
+                    </summary>
+                    <div className="mt-4">
+                      <EditStaffForm
+                        organizationUserId={row.organizationUserId}
+                        fullName={row.displayName}
+                        email={row.email}
+                      />
+                    </div>
+                  </details>
 
                   <details className="w-full rounded-sm border border-brand-border bg-brand-surface-2 p-4">
                     <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-brand-yellow">

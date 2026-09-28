@@ -28,7 +28,10 @@ import {
   type MemberListQuery,
   type MemberSort,
 } from "./MemberFilters";
-import { secondaryButtonClass } from "@/components/panel/form";
+import { dangerButtonClass, rowButtonClass, secondaryButtonClass } from "@/components/panel/form";
+import { deleteMemberAction } from "./[id]/manage-actions";
+import { ConfirmActionButton } from "@/components/panel/ConfirmActionButton";
+import { memberDeleteConfirmText } from "@/domain/admin/deletion";
 
 export const metadata: Metadata = {
   title: "Üyeler — BlackBox Panel",
@@ -251,6 +254,24 @@ export default async function StaffMembersPage({
                         <Pill tone="yellow">{member.points} p</Pill>
                       </div>
                     </Link>
+
+                    <div className="flex flex-wrap gap-2 pb-3">
+                      <Link
+                        href={`/personel/uyeler/${member.id}#duzenle`}
+                        className={rowButtonClass}
+                      >
+                        Düzenle
+                      </Link>
+                      {membership.role === "admin" && (
+                        <ConfirmActionButton
+                          action={deleteMemberAction.bind(null, member.id)}
+                          confirmText={memberDeleteConfirmText(member.fullName)}
+                          className={dangerButtonClass}
+                        >
+                          Sil
+                        </ConfirmActionButton>
+                      )}
+                    </div>
                   </li>
                 );
               })}

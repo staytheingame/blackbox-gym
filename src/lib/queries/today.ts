@@ -24,6 +24,8 @@ export type DayRosterMember = {
   /** Hesabını kurmamış sporcuya bildirim gitmez — antrenör elle arar. */
   hasAccount: boolean;
   remindersEnabled: boolean;
+  /** Yürürlükte aktif paketi var mı. `false` = paket yok (ders alamaz). */
+  hasPackage: boolean;
   /** Yürürlükteki paketten kalan ders (`null` = sınırsız ya da paket yok). */
   sessionsRemaining: number | null;
   membershipDaysLeft: number | null;
@@ -132,6 +134,7 @@ export async function getDayView(
       status: booking.status as BookingStatus,
       hasAccount: booking.member.userId !== null,
       remindersEnabled: booking.member.remindersEnabled,
+      hasPackage: credit !== undefined,
       sessionsRemaining: credit?.remaining ?? null,
       membershipDaysLeft: credit?.daysLeft ?? null,
     };

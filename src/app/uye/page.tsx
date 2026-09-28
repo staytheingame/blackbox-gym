@@ -19,6 +19,7 @@ import { formatDateTR, getWeekStart } from "@/lib/date";
 import { BADGE_DEFINITIONS } from "@/domain/gamification/badges";
 import { getMemberWaivers } from "@/lib/queries/waivers";
 import { getMemberRankState } from "@/lib/queries/ranks";
+import { enabledFeatureFlags } from "@/config/feature-flags";
 import {
   EmptyState,
   PanelCard,
@@ -159,7 +160,9 @@ export default async function MemberDashboardPage({
         </div>
       )}
 
-      {rankState?.progress && rankState.nextRank && (
+      {enabledFeatureFlags().has("kusaklar") &&
+        rankState?.progress &&
+        rankState.nextRank && (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-sm border border-brand-border bg-brand-surface p-5">
           <div className="flex items-center gap-3">
             <span
