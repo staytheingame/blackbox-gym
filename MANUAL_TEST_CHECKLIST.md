@@ -455,3 +455,20 @@ bağlantısından şifresini kur.
 - [ ] Salonda satıştaki paket varsa üyelerde 0 TL'lik aktif deneme aboneliği var
       (kalan ders görünüyor); paket yoksa "Yürürlükte üyeliğin yok" diyor.
 - [ ] Yönetici hesabıyla üçü de silinebiliyor (tahsilatları yok).
+
+## Faz 20 — kayıt formunda hedef seçimi
+
+> Önce v2 kurulum SQL'i (ya da `npx prisma migrate deploy`): `goals` sütununu ekler.
+> Çalıştırılmadan da kayıt bozulmaz (bkz. aşağıdaki son madde).
+
+- [ ] `/katil/<slug>` formunda "Hedefin ne?" var: Boks, Güreş, Fitness, Kilo verme,
+      Kilo alma (kas kütlesi ekleme), Kondisyon ve dayanıklılık, Müsabakaya hazırlık.
+- [ ] Bir hedef seçip kayıt olmak çalışıyor; birden fazla seçip (ör. Boks + Kilo verme)
+      kayıt olmak da çalışıyor.
+- [ ] Hiç hedef seçmeden gönderince "En az bir hedef seç." uyarısı çıkıyor, kayıt açılmıyor.
+- [ ] Sporcu kartında (`/personel/uyeler/<id>`) "Kayıt Yanıtları"nın ilk satırı
+      **Hedefler**: seçilenler virgülle, listedeki sırayla.
+- [ ] Formu elle bozup listede olmayan hedef göndermek reddediliyor.
+- [ ] `goals` sütunu henüz YOKKEN kayıt olmak yine çalışıyor: meslek/yoğunluk/saatler
+      kaydediliyor, hedefler denetim kaydındaki "Sporcu kayıt linkinden kaydoldu"
+      satırında "Kayıt yanıtları: hedef: …" olarak duruyor; sporcu kartı hedefsiz açılıyor.

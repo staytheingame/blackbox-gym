@@ -1,14 +1,31 @@
 /**
  * Kayıt formu yanıtları — saf fonksiyonlar, veritabanı bilmez.
  *
- * Form üç şey sorar: **meslek**, **günlük yoğunluk** ve **tercih edilen
- * antrenman saatleri**. Amaç antrenörün ilk görüşmeden önce sporcunun gününü
- * tanıması: çok yoğun biriyle sabah 06:00 ya da akşam 21:00 konuşulur,
- * esnek biriyle öğle arası da olur.
+ * Form dört şey sorar: **hedef**, **meslek**, **günlük yoğunluk** ve **tercih
+ * edilen antrenman saatleri**. Amaç antrenörün ilk görüşmeden önce sporcunun
+ * ne istediğini ve gününü tanıması: hedefi kilo verme olan biriyle beslenme
+ * konuşulur, müsabakaya hazırlanan biriyle program; çok yoğun biriyle sabah
+ * 06:00 ya da akşam 21:00 konuşulur, esnek biriyle öğle arası da olur.
  *
  * Seçenek anahtarları veritabanına yazılır, o yüzden **anahtarlar sabittir**;
  * ekranda görünen ad (`label`) istenirse değişir.
  */
+
+/**
+ * Hedefler — sporcu BİR YA DA BİRDEN FAZLA seçer (ör. fitness + kilo verme).
+ * Kilo verme ile kilo alma birlikte de seçilebilir (yeniden kompozisyon).
+ */
+export const GOAL_OPTIONS = [
+  { value: "boks", label: "Boks" },
+  { value: "gures", label: "Güreş" },
+  { value: "fitness", label: "Fitness" },
+  { value: "kilo-verme", label: "Kilo verme" },
+  { value: "kilo-alma", label: "Kilo alma (kas kütlesi ekleme)" },
+  { value: "kondisyon", label: "Kondisyon ve dayanıklılık" },
+  { value: "musabaka", label: "Müsabakaya hazırlık" },
+] as const;
+
+export type Goal = (typeof GOAL_OPTIONS)[number]["value"];
 
 export const DAILY_LOAD_OPTIONS = [
   { value: "sakin", label: "Sakin — günüm esnek" },
@@ -31,12 +48,21 @@ export const PREFERRED_TIME_OPTIONS = [
 
 export type PreferredTime = (typeof PREFERRED_TIME_OPTIONS)[number]["value"];
 
+const GOAL_VALUES: readonly string[] = GOAL_OPTIONS.map((option) => option.value);
 const DAILY_LOAD_VALUES: readonly string[] = DAILY_LOAD_OPTIONS.map(
   (option) => option.value,
 );
 const PREFERRED_TIME_VALUES: readonly string[] = PREFERRED_TIME_OPTIONS.map(
   (option) => option.value,
 );
+
+export function isGoal(value: string): value is Goal {
+  return GOAL_VALUES.includes(value);
+}
+
+export function goalLabel(value: string): string {
+  return GOAL_OPTIONS.find((option) => option.value === value)?.label ?? value;
+}
 
 export function isDailyLoad(value: string): value is DailyLoad {
   return DAILY_LOAD_VALUES.includes(value);
@@ -56,6 +82,7 @@ export function preferredTimeLabel(value: string): string {
 }
 
 export type RegistrationAnswers = {
+  goals: Goal[];
   occupation: string;
   dailyLoad: DailyLoad;
   preferredTimes: PreferredTime[];
@@ -74,10 +101,25 @@ const OCCUPATION_MAX = 80;
  * ekranda karşılığı olmayan bir anahtar yazardı.
  */
 export function parseRegistrationAnswers(input: {
+  goals: string[];
   occupation: string;
   dailyLoad: string;
   preferredTimes: string[];
 }): ParsedAnswers {
+  const uniqueGoals = [...new Set(input.goals)];
+  if (uniqueGoals.length === 0) {
+    return { ok: false, error: "En az bir hedef seç." };
+  }
+  const goals: Goal[] = [];
+  for (const value of uniqueGoals) {
+    if (!isGoal(value)) {
+      return { ok: false, error: "Hedef seçimi geçersiz." };
+    }
+    goals.push(value);
+  }
+  // Ekranda hep aynı sırayla görünsün: seçilme sırası değil, listedeki sıra.
+  goals.sort((a, b) => GOAL_VALUES.indexOf(a) - GOAL_VALUES.indexOf(b));
+
   const occupation = input.occupation.trim().replace(/\s+/g, " ");
   if (occupation.length < OCCUPATION_MIN) {
     return { ok: false, error: "Mesleğini yaz." };
@@ -109,7 +151,12 @@ export function parseRegistrationAnswers(input: {
 
   return {
     ok: true,
-    answers: { occupation, dailyLoad: input.dailyLoad, preferredTimes: times },
+    answers: {
+      goals,
+      occupation,
+      dailyLoad: input.dailyLoad,
+      preferredTimes: times,
+    },
   };
 }
 
@@ -118,11 +165,15 @@ export function parseRegistrationAnswers(input: {
  * yedek metin. Yazılabildiğinde de sporcu kartındaki başlıkla aynı dili konuşur.
  */
 export function summarizeAnswers(answers: {
+  goals?: string[] | null;
   occupation?: string | null;
   dailyLoad?: string | null;
   preferredTimes?: string[] | null;
 }): string {
   const parts: string[] = [];
+  if (answers.goals && answers.goals.length > 0) {
+    parts.push(`hedef: ${answers.goals.map(goalLabel).join(", ")}`);
+  }
   if (answers.occupation) parts.push(`meslek: ${answers.occupation}`);
   if (answers.dailyLoad) {
     parts.push(`günlük yoğunluk: ${dailyLoadLabel(answers.dailyLoad)}`);

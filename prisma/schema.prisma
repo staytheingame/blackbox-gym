@@ -1121,6 +1121,7 @@ model CoachPayout {
 // görür ve ilk görüşmeyi buna göre yapar. `Member` ile 1-1 ilişkidir ama
 // ayrı tabloda durur — bkz. `Member.registrationAnswer`.
 //
+// goals:          src/domain/registration/answers.ts içindeki hedef anahtarları (bir ya da birden fazla)
 // dailyLoad:      sakin | orta | yogun | cok-yogun
 // preferredTimes: src/domain/registration/answers.ts içindeki saat dilimi anahtarları
 // ─────────────────────────────────────────────────────────────
@@ -1128,6 +1129,8 @@ model MemberRegistrationAnswer {
   id                String   @id @default(cuid())
   memberId          String   @unique
   member            Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  /// Sporcunun hedefleri (boks, güreş, fitness, kilo verme, kilo alma …) — çoklu seçim.
+  goals             String[] @default([])
   occupation        String?
   dailyLoad         String?
   preferredTimes    String[] @default([])

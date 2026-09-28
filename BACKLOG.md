@@ -544,6 +544,30 @@ ve sporcu listelerinde düzenle/sil yoktu; deneme hesapları temizlenemiyordu.
 - Silme geri alınamaz (yalnız onay penceresi var); toplu silme yok.
 - "Pasif yap" sporcu düzenle formunda; kadroda karşılığı mevcut "Hesabı Kapat".
 
+## Yapıldı (Faz 20 — kayıt formunda hedef seçimi)
+
+**İstek:** Danışan kayıt olurken boks/güreş, fitness, kilo verme, kilo alma (kas
+kütlesi ekleme) gibi hedefini de yanıtlasın; bir ya da birden fazla seçebilsin.
+
+- `/katil/<slug>` formuna **"Hedefin ne?"** çoklu seçim: Boks, Güreş, Fitness,
+  Kilo verme, Kilo alma (kas kütlesi ekleme), Kondisyon ve dayanıklılık,
+  Müsabakaya hazırlık. En az biri zorunlu; listede olmayan değer reddedilir
+  (`GOAL_OPTIONS`, `parseRegistrationAnswers`; testli). Kilo verme + kilo alma
+  birlikte seçilebilir (yeniden kompozisyon).
+- `MemberRegistrationAnswer.goals TEXT[]` — migration `20260928150000_kayit_hedefleri`
+  (`ADD COLUMN IF NOT EXISTS`, yalnız kendi tablomuza; `Member`a dokunmaz).
+- Sporcu kartındaki **Kayıt Yanıtları** bölümünün ilk satırı "Hedefler".
+- **Sütun henüz yokken de kayıt bozulmaz:** tam yazım hata verirse hedef dışındaki
+  yanıtlar (`select: { id: true }` ile, Prisma olmayan sütunu geri okumasın diye)
+  yine kaydedilir ve hedefler denetim kaydına özet olarak düşer; okuma da hedefsiz
+  yedeğe düşer. Yani kod migration'dan ÖNCE yayına çıksa bile veri kaybı olmaz.
+- Canlıya uygulanacak SQL v2: öncekinin yerini alır (aynı linkler, `goals` dahil,
+  üç migration'ı da geçmişe işler); dört veritabanı durumunda ve tekrar
+  çalıştırmada denendi.
+
+### Açık
+- Hedef sporcu listesinde süzgeç/rozet olarak henüz kullanılmıyor (yalnız kartta).
+
 ## Yapıldı (Faz 12 — koç kapsamı, tahsilat ve salon muhasebesi)
 
 Kullanıcı isteği: **"koç ekleme-üye ekleme, her koçun kendi üyesini görmesi

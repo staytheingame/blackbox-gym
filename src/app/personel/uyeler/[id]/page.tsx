@@ -42,6 +42,7 @@ import { memberDeleteConfirmText } from "@/domain/admin/deletion";
 import { dangerButtonClass } from "@/components/panel/form";
 import {
   dailyLoadLabel,
+  goalLabel,
   preferredTimeLabel,
 } from "@/domain/registration/answers";
 import { ageFrom } from "@/domain/marketing/meta-matching";
@@ -302,6 +303,10 @@ export default async function StaffMemberDetailPage({
         >
           <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
             {[
+              {
+                label: "Hedefler",
+                value: registrationAnswers.goals.map(goalLabel).join(", "),
+              },
               { label: "Meslek", value: registrationAnswers.occupation ?? "" },
               {
                 label: "Günlük yoğunluk",

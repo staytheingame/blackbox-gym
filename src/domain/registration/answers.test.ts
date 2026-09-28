@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  GOAL_OPTIONS,
   dailyLoadLabel,
+  goalLabel,
   parseRegistrationAnswers,
   preferredTimeLabel,
   summarizeAnswers,
 } from "./answers";
 
 const valid = {
+  goals: ["fitness"],
   occupation: "Avukat",
   dailyLoad: "yogun",
   preferredTimes: ["aksam", "sabah-erken"],
@@ -83,6 +86,63 @@ describe("parseRegistrationAnswers", () => {
   });
 });
 
+describe("hedefler", () => {
+  it("bir hedef seçilebilir", () => {
+    const result = parseRegistrationAnswers({ ...valid, goals: ["boks"] });
+
+    expect(result.ok && result.answers.goals).toEqual(["boks"]);
+  });
+
+  it("birden fazla hedef seçilebilir ve listedeki sıraya dizilir", () => {
+    const result = parseRegistrationAnswers({
+      ...valid,
+      goals: ["kilo-alma", "boks", "fitness"],
+    });
+
+    expect(result.ok && result.answers.goals).toEqual(["boks", "fitness", "kilo-alma"]);
+  });
+
+  it("hiç hedef seçilmemişse reddeder", () => {
+    expect(parseRegistrationAnswers({ ...valid, goals: [] })).toEqual({
+      ok: false,
+      error: "En az bir hedef seç.",
+    });
+  });
+
+  it("listede olmayan hedefi sessizce atmaz, reddeder", () => {
+    expect(
+      parseRegistrationAnswers({ ...valid, goals: ["fitness", "ucmak"] }),
+    ).toEqual({ ok: false, error: "Hedef seçimi geçersiz." });
+  });
+
+  it("aynı hedefi iki kez göndermeyi tekilleştirir", () => {
+    const result = parseRegistrationAnswers({
+      ...valid,
+      goals: ["gures", "gures"],
+    });
+
+    expect(result.ok && result.answers.goals).toEqual(["gures"]);
+  });
+
+  it("kilo verme ile kilo almayı birlikte seçmeye izin verir (yeniden kompozisyon)", () => {
+    const result = parseRegistrationAnswers({
+      ...valid,
+      goals: ["kilo-verme", "kilo-alma"],
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it("istenen hedeflerin hepsi listede: boks, güreş, fitness, kilo verme, kilo alma", () => {
+    const values = GOAL_OPTIONS.map((option) => option.value);
+
+    for (const wanted of ["boks", "gures", "fitness", "kilo-verme", "kilo-alma"]) {
+      expect(values).toContain(wanted);
+    }
+    expect(goalLabel("kilo-alma")).toBe("Kilo alma (kas kütlesi ekleme)");
+  });
+});
+
 describe("etiketler ve özet", () => {
   it("bilinen anahtarın ekran adını verir, bilinmeyeni olduğu gibi bırakır", () => {
     expect(dailyLoadLabel("cok-yogun")).toBe("Çok yoğun — günüm dolu");
@@ -93,13 +153,14 @@ describe("etiketler ve özet", () => {
 
   it("özeti tek satırda üretir", () => {
     const summary = summarizeAnswers({
+      goals: ["boks", "kilo-verme"],
       occupation: "Doktor",
       dailyLoad: "cok-yogun",
       preferredTimes: ["gece", "hafta-sonu"],
     });
 
     expect(summary).toBe(
-      "meslek: Doktor · günlük yoğunluk: Çok yoğun — günüm dolu · saat tercihi: Gece (20:00–22:00), Hafta sonu",
+      "hedef: Boks, Kilo verme · meslek: Doktor · günlük yoğunluk: Çok yoğun — günüm dolu · saat tercihi: Gece (20:00–22:00), Hafta sonu",
     );
   });
 

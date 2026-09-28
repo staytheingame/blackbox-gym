@@ -578,29 +578,53 @@ async function validCoachFor(
   return active ? active.userId : null;
 }
 
+/**
+ * Yanıtları yazar. `true` = HEPSİ tabloya yazıldı.
+ *
+ * `goals` sütunu sonradan eklendi. Migration henüz uygulanmamışsa (tablo eski
+ * hâliyle duruyorsa) tam yazım hata verir; bu durumda hedef DIŞINDAKİ yanıtlar
+ * yine de kaydedilir ve `false` döner — çağıran özeti (hedefler dahil) denetim
+ * kaydına koyar, hiçbir bilgi kaybolmaz. `select: { id: true }` bilerek: Prisma
+ * varsayılan olarak yazılan satırın TÜM sütunlarını geri okur, olmayan sütun
+ * yüzünden yazım yine patlardı.
+ */
 async function saveRegistrationAnswers(input: {
   memberId: string;
   answers: RegistrationAnswers;
   chosenCoachUserId: string | null;
 }): Promise<boolean> {
+  const base = {
+    memberId: input.memberId,
+    occupation: input.answers.occupation,
+    dailyLoad: input.answers.dailyLoad,
+    preferredTimes: input.answers.preferredTimes,
+    chosenCoachUserId: input.chosenCoachUserId,
+  };
+
   try {
     await prisma.memberRegistrationAnswer.create({
-      data: {
-        memberId: input.memberId,
-        occupation: input.answers.occupation,
-        dailyLoad: input.answers.dailyLoad,
-        preferredTimes: input.answers.preferredTimes,
-        chosenCoachUserId: input.chosenCoachUserId,
-      },
+      data: { ...base, goals: input.answers.goals },
+      select: { id: true },
     });
     return true;
   } catch (error) {
-    console.error("[kayit] yanıtlar tabloya yazılamadı", error);
-    return false;
+    console.error("[kayit] yanıtlar tabloya yazılamadı, hedefsiz denenecek", error);
   }
+
+  try {
+    await prisma.memberRegistrationAnswer.create({
+      data: base,
+      select: { id: true },
+    });
+  } catch (error) {
+    console.error("[kayit] yanıtlar tabloya yazılamadı", error);
+  }
+  // İkinci deneme başarılı olsa bile hedefler tabloda değil → özet denetime düşsün.
+  return false;
 }
 
 export type StoredRegistrationAnswers = {
+  goals: string[];
   occupation: string | null;
   dailyLoad: string | null;
   preferredTimes: string[];
@@ -615,9 +639,37 @@ export async function getRegistrationAnswers(
   memberId: string,
 ): Promise<StoredRegistrationAnswers | null> {
   try {
-    const row = await prisma.memberRegistrationAnswer.findUnique({
-      where: { memberId },
-    });
+    let row: {
+      goals: string[];
+      occupation: string | null;
+      dailyLoad: string | null;
+      preferredTimes: string[];
+      chosenCoachUserId: string | null;
+    } | null;
+    try {
+      row = await prisma.memberRegistrationAnswer.findUnique({
+        where: { memberId },
+        select: {
+          goals: true,
+          occupation: true,
+          dailyLoad: true,
+          preferredTimes: true,
+          chosenCoachUserId: true,
+        },
+      });
+    } catch {
+      // `goals` sütunu henüz yoksa: hedefsiz oku, kart yine de görünsün.
+      const legacy = await prisma.memberRegistrationAnswer.findUnique({
+        where: { memberId },
+        select: {
+          occupation: true,
+          dailyLoad: true,
+          preferredTimes: true,
+          chosenCoachUserId: true,
+        },
+      });
+      row = legacy ? { goals: [], ...legacy } : null;
+    }
     if (!row) return null;
 
     let chosenCoachName: string | null = null;
@@ -630,6 +682,7 @@ export async function getRegistrationAnswers(
     }
 
     return {
+      goals: row.goals,
       occupation: row.occupation,
       dailyLoad: row.dailyLoad,
       preferredTimes: row.preferredTimes,

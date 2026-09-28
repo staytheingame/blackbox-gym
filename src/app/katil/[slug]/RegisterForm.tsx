@@ -17,6 +17,7 @@ import {
 } from "@/components/panel/form";
 import {
   DAILY_LOAD_OPTIONS,
+  GOAL_OPTIONS,
   PREFERRED_TIME_OPTIONS,
 } from "@/domain/registration/answers";
 import type { CoachChoice } from "@/lib/queries/join-links";
@@ -256,6 +257,29 @@ export function RegisterForm({
         <legend className="text-xs font-bold uppercase tracking-[0.15em] text-brand-yellow">
           Antrenman Tercihin
         </legend>
+
+        <div>
+          <span className={labelClass}>Hedefin ne?</span>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {GOAL_OPTIONS.map((option) => (
+              <label
+                key={option.value}
+                className="flex min-h-11 items-center gap-3 rounded-sm border border-brand-border bg-brand-black/40 px-3 text-sm text-brand-white"
+              >
+                <input
+                  type="checkbox"
+                  name="goals"
+                  value={option.value}
+                  className="h-5 w-5 shrink-0 accent-brand-yellow"
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+          <p className={hintClass}>
+            Bir ya da birden fazla seçebilirsin — en az birini işaretle.
+          </p>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>

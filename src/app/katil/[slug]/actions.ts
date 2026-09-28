@@ -93,9 +93,11 @@ export async function registerMemberAction(
     return { error: parsed.error.issues[0]?.message ?? "Form geçersiz." };
   }
 
-  // Meslek, günlük yoğunluk ve antrenman saati tercihi — hepsi zorunlu: antrenör
-  // ilk görüşmeden önce sporcunun gününü bilsin.
+  // Hedef (bir ya da birden fazla), meslek, günlük yoğunluk ve antrenman saati
+  // tercihi — hepsi zorunlu: antrenör ilk görüşmeden önce sporcunun ne istediğini
+  // ve gününü bilsin.
   const answers = parseRegistrationAnswers({
+    goals: formData.getAll("goals").map(String),
     occupation: formData.get("occupation")?.toString() ?? "",
     dailyLoad: formData.get("dailyLoad")?.toString() ?? "",
     preferredTimes: formData.getAll("preferredTimes").map(String),
