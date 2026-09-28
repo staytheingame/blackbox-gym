@@ -440,6 +440,43 @@ boştu. Paket fiyatını yalnız yönetici düzeltebiliyordu.
 - Kayıt olana otomatik paket atanmıyor: `MemberJoinLink`'e paket alanı gerekir
   (mevcut tabloya sütun = migration şart). Paketi olmayan sporcu ders rezerve edemez.
 
+## Yapıldı (Faz 17 — üye ekleme tek link, uygulama olarak kurulum)
+
+**Sorun:** "Yeni Üye Ekle" hâlâ ad/soyad/e-posta yazdırıyordu — kayıt linki
+varken elle iş. Panel ayrıca telefona/bilgisayara uygulama gibi kurulamıyordu
+(`BACKLOG`ta "PWA — ayrı karar" olarak duruyordu).
+
+### Üye ekleme
+- `/personel/uyeler` → "Yeni Üye Ekle" kartı artık salonun kayıt bağlantısını
+  (kopyala, WhatsApp, QR) gösterir; ad/soyad/e-posta yazılmaz. Bağlantı yoksa
+  kendiliğinden üretilir (`NewMemberLinkCard`). Eski elle ekleme formu
+  "bağlantıyı kullanamayan biri için" başlığı altında kapalı durur.
+- QR PNG indirme artık antrenöre de açık (`requireStaff`); salon girişine asmak
+  yalnız yöneticinin işi olmamalı.
+
+### Uygulama olarak kurulum (PWA)
+- `app/manifest.ts` — `standalone`, marka renkleri, 192/512 + maskable ikon
+  (`public/icons/`, siyah zemin + sarı "BB"), `start_url = /uygulama`.
+- `/uygulama` giriş kapısı: oturum açıksa rolünün paneline, değilse `/giris`
+  (uygulama her açılışta giriş formu göstermesin).
+- `public/sw.js` — **bilerek yalnız çevrimdışı ekran**: sayfa/veri ÖNBELLEKLENMEZ
+  (panelde sağlık notu, telefon, ödeme var; ortak cihazda çıkıştan sonra eski
+  sayfa açılırsa veri sızar). Ağ yoksa `public/cevrimdisi.html` (tek dosya, dış
+  bağımlılıksız). Yalnız üretimde kaydedilir; `sw.js` önbelleksiz sunulur
+  (`next.config.ts`).
+- "Uygulamayı Yükle": Chrome/Edge/Android için sistem penceresi, iPhone için
+  Paylaş → Ana Ekrana Ekle adımları (`InstallAppCard`; yan menü + giriş ekranı).
+  `beforeinstallprompt` kök düzende yakalanır, sonradan açılan düğme kaçırmaz.
+- `manifest.test.ts`: ikon dosyaları var mı, bildirilen boyutta mı, service
+  worker yalnız çevrimdışı ekranı mı saklıyor.
+
+### Açık
+- Kurulum penceresi/ikon/çevrimdışı gerçek cihazda denenmedi (sandbox'ta tarayıcı
+  yok); doğrulanan: manifest, `sw.js` başlıkları, ikon boyutları, `/uygulama`
+  yönlendirmesi, gerçek `next build` + `next start`.
+- Push bildirimi yok (bildirimler panel içi + e-posta/WhatsApp kanalı).
+- Çevrimdışı çalışma yok: uygulama internet ister.
+
 ## Yapıldı (Faz 12 — koç kapsamı, tahsilat ve salon muhasebesi)
 
 Kullanıcı isteği: **"koç ekleme-üye ekleme, her koçun kendi üyesini görmesi

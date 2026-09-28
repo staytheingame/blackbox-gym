@@ -362,3 +362,34 @@ bağlantısından şifresini kur.
 - [ ] Denetim kaydında "Paket fiyatı düzeltildi" satırı eski → yeni tutarla var.
 - [ ] Antrenör bu ekrandan paket ekleyemiyor/kaldıramıyor/süre-ders adedini
       değiştiremiyor (yalnız fiyat alanı var).
+
+## Faz 17 — üye ekleme tek link, uygulama olarak kurulum (PWA)
+
+### Yeni üye ekleme (`/personel/uyeler`)
+- [ ] "Yeni Üye Ekle" kartında ad/soyad/e-posta alanı YOK; salonun kayıt
+      bağlantısı, kopyala/WhatsApp düğmeleri ve QR görünüyor.
+- [ ] Hiç bağlantı yokken sayfayı açmak "Genel kayıt bağlantısı"nı kendiliğinden
+      üretiyor (yönetici ve antrenör için).
+- [ ] Açık bağlantı yoksa (hepsi kapalı) kart "yönetici yeniden açabilir" diyor.
+- [ ] "Bağlantıyı kullanamayan biri için elle ekle" kapalı duruyor; açılınca
+      eski form çalışıyor.
+- [ ] Antrenör hesabıyla QR'ı indir (PNG) çalışıyor; oturumsuz 401 veriyor.
+- [ ] Giriş ekranındaki metin artık "salondan kayıt bağlantısını iste" diyor.
+
+### Uygulama olarak kurulum (PWA)
+- [ ] Chrome/Edge masaüstü: adres çubuğunda "Yükle" simgesi çıkıyor; panel yan
+      menüsündeki "Uygulamayı Yükle" sistem penceresini açıyor. Kurulunca
+      düğme kayboluyor.
+- [ ] Android Chrome: giriş ekranında ve menüde "Uygulamayı Yükle" var; kurulan
+      uygulama kendi penceresinde (adres çubuğu yok) açılıyor, ikon siyah zemin
+      üstünde sarı "BB".
+- [ ] iPhone Safari: "Uygulamayı Yükle" adımları (Paylaş → Ana Ekrana Ekle)
+      gösteriyor; eklenen simge doğru; uygulama tam ekran açılıyor.
+- [ ] Uygulamayı açınca **oturum açıksa doğrudan rolünün paneline** (sporcu
+      `/uye`, antrenör `/personel`, yönetici `/yonetim`) düşüyor, giriş formunu
+      görmüyor; oturum yoksa `/giris`.
+- [ ] Uçak modunda uygulamayı açmak "Çevrimdışısın" ekranını gösteriyor; internet
+      gelince "Tekrar Dene" paneli açıyor.
+- [ ] Çıkış yapıp uçak moduna geçince önceki sayfalar AÇILMIYOR (kişisel veri
+      önbellekte kalmıyor).
+- [ ] Geliştirme modunda (`npm run dev`) service worker kaydedilmiyor.

@@ -20,6 +20,7 @@ import {
   StatCard,
 } from "@/components/panel/ui";
 import { AddMemberForm } from "./AddMemberForm";
+import { NewMemberLinkCard } from "@/components/panel/NewMemberLinkCard";
 import {
   MEMBER_SORTS,
   MEMBER_STATUS_LABEL,
@@ -160,9 +161,22 @@ export default async function StaffMembersPage({
 
       <PanelCard
         title="Yeni Üye Ekle"
-        description="Sporcu davet bağlantısıyla eklenir — şifresini kendisi belirler."
+        description="Ad, soyad ya da e-posta yazma — tek bağlantıyı gönder, üye bilgilerini kendisi yazıp hesabını açsın."
       >
-        <AddMemberForm coaches={coaches} />
+        <NewMemberLinkCard
+          organizationId={membership.organizationId}
+          actor={{ id: user.id, displayName: user.displayName }}
+        />
+
+        {/* Elle ekleme yalnız bağlantıyı kullanamayan biri için: kapalı, göze çarpmaz. */}
+        <details className="mt-5 border-t border-brand-border pt-4">
+          <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-brand-muted hover:text-brand-yellow">
+            Bağlantıyı kullanamayan biri için elle ekle
+          </summary>
+          <div className="mt-4">
+            <AddMemberForm coaches={coaches} />
+          </div>
+        </details>
       </PanelCard>
 
       <PanelCard title={`Üye Listesi (${sorted.length})`}>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="robots" content="noindex" />
+    <title>Çevrimdışı — BlackBox</title>
+    <!-- Tek dosya, dış bağımlılık yok: internet yokken de açılabilmeli. -->
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: #000;
+        color: #fff;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      main { width: 100%; max-width: 360px; }
+      .logo { font-size: 26px; font-weight: 800; letter-spacing: 0.04em; }
+      .logo span { background: #f5c400; color: #000; padding: 2px 8px; margin-left: 4px; }
+      .card { margin-top: 24px; padding: 24px; border: 1px solid #2a2a2a; background: #141414; border-radius: 2px; }
+      h1 { margin: 0; font-size: 22px; text-transform: uppercase; letter-spacing: 0.04em; }
+      p { margin: 12px 0 0; font-size: 14px; line-height: 1.6; color: #a3a3a3; }
+      button {
+        margin-top: 20px; width: 100%; min-height: 44px; border: 0; border-radius: 2px;
+        background: #f5c400; color: #000; font-weight: 700; font-size: 14px;
+        text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="logo">BLACK<span>BOX</span></div>
+      <div class="card">
+        <h1>Çevrimdışısın</h1>
+        <p>
+          İnternet bağlantısı yok. Bağlantı gelince panel kaldığın yerden açılır —
+          kişisel bilgilerin bu cihazda saklanmadığı için bağlantı olmadan gösterilemiyor.
+        </p>
+        <button type="button" onclick="location.reload()">Tekrar Dene</button>
+      </div>
+    </main>
+  </body>
+</html>

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser, requireAdmin } from "@/lib/auth/guards";
+import { getCurrentUser, requireStaff } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db";
 import { joinUrl } from "@/lib/queries/join-links";
 import { qrPng } from "@/lib/qr";
@@ -7,8 +7,9 @@ import { qrPng } from "@/lib/qr";
 /**
  * KAYIT BAĞLANTISI QR İNDİRME — `/yonetim/kayit-linki/qr/<bağlantı-id>`.
  *
- * Yalnız yönetici indirir ve yalnız kendi salonunun bağlantısı için: QR'ın
- * içindeki adres herkese açıktır ama "hangi bağlantılar var" bilgisi değildir.
+ * Yalnız personel (antrenör ve yönetici) indirir ve yalnız kendi salonunun
+ * bağlantısı için: QR'ın içindeki adres herkese açıktır ama "hangi bağlantılar
+ * var" bilgisi değildir.
  * Dosya baskıya hazır 1024 px PNG'dir.
  */
 
@@ -24,10 +25,10 @@ export async function GET(
   if (!user) {
     return NextResponse.json({ ok: false, error: "Oturum açılmamış" }, { status: 401 });
   }
-  const membership = await requireAdmin(user.id).catch(() => null);
+  const membership = await requireStaff(user.id).catch(() => null);
   if (!membership) {
     return NextResponse.json(
-      { ok: false, error: "Yönetici yetkisi gerekli" },
+      { ok: false, error: "Personel yetkisi gerekli" },
       { status: 403 },
     );
   }

@@ -13,6 +13,7 @@ import {
 import { enabledFeatureFlags } from "@/config/feature-flags";
 import { logoutAction } from "@/lib/auth/actions";
 import { useMobileNav } from "./MobileNavContext";
+import { InstallAppCard } from "@/components/pwa/InstallAppCard";
 import { CloseIcon, ExternalIcon, LogoutIcon } from "./icons";
 
 export type PanelUser = {
@@ -139,6 +140,8 @@ export function PanelSidebar({
               </div>
             )}
           </div>
+
+          <InstallAppCard compact />
 
           <Link
             href="/"

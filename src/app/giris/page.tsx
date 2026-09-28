@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LoginForm } from "./LoginForm";
+import { InstallAppCard } from "@/components/pwa/InstallAppCard";
 
 export const metadata: Metadata = {
   title: "Giriş — BlackBox",
@@ -30,14 +31,16 @@ export default function LoginPage() {
             Panele Giriş
           </h1>
           <p className="mt-2 text-xs leading-relaxed text-brand-muted">
-            Hesabın yoksa resepsiyonla iletişime geç — üyeler personel
-            tarafından sisteme eklenir.
+            Hesabın yoksa salondan kayıt bağlantısını iste — bağlantıya girip
+            bilgilerini yazarak hesabını kendin açarsın.
           </p>
 
           <div className="mt-6">
             <LoginForm />
           </div>
         </div>
+
+        <InstallAppCard />
 
         <Link
           href="/"
