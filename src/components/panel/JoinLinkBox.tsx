@@ -14,14 +14,19 @@ export function JoinLinkBox({
   url,
   label,
   fresh = false,
+  message: customMessage,
 }: {
   url: string;
   label: string;
   fresh?: boolean;
+  /** Hazır mesaj metni — verilmezse sporcu kaydı mesajı kullanılır. */
+  message?: string;
 }) {
   const [copied, setCopied] = useState<"url" | "mesaj" | null>(null);
 
-  const message = `BlackBox üyelik kaydı: ${url} — bilgilerini yaz, şifreni belirle, hesabın anında açılır.`;
+  const message =
+    customMessage ??
+    `BlackBox üyelik kaydı: ${url} — bilgilerini yaz, şifreni belirle, hesabın anında açılır.`;
 
   async function copy(text: string, which: "url" | "mesaj") {
     try {

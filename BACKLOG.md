@@ -389,6 +389,57 @@ yanıyordu ama sporcuya "Gelmedi" diye görünüyordu; yanan ders ayrı sayılm�
 - Otomatik yakma yok: yoklama alınmayan ders kendiliğinden yanmaz, antrenör
   işaretleyene kadar rezerve sayılmaya devam eder.
 
+## Yapıldı (Faz 16 — kayıt formu yanıtları, antrenör bağlantısı, QR, paket fiyatı)
+
+**Sorun:** kayıt linki sporcuyu kaydediyordu ama antrenörün ilk görüşmede
+ihtiyaç duyduğu bilgiyi (meslek, günün yoğunluğu, hangi saatlerde gelebileceği)
+ve sporcunun kimin öğrencisi olmak istediğini sormuyordu. Antrenör hesapları
+tek tek e-postayla davet edildiği için kadro kurulmadan "koçunuz kim" listesi
+boştu. Paket fiyatını yalnız yönetici düzeltebiliyordu.
+
+### Kayıt formu
+- `/katil/<slug>`: **meslek**, **günlük yoğunluk** (sakin/orta/yoğun/çok yoğun),
+  **tercih edilen antrenman saatleri** (çoklu) ve **koçunuz kim** eklendi;
+  hepsi zorunlu, koç "fark etmez" olabilir. Yaş, doğum tarihinden hesaplanır
+  (mevcut alan). Seçenek anahtarları `src/domain/registration/answers.ts`te.
+- Seçilen antrenör linkin varsayılan antrenöründen önce gelir. Formdan gelen
+  kimlik güvenilmez: salonun aktif kadrosunda olmalı, değilse yok sayılır.
+- Yanıtlar yeni `MemberRegistrationAnswer` tablosunda; sporcu kartında
+  "Kayıt Yanıtları" bölümü. `Member`a sütun EKLENMEDİ.
+- **Migration bekliyorsa** kayıt bozulmaz: yanıtlar transaction dışında yazılır,
+  yazılamazsa denetim kaydına özet olarak düşer; sporcu kartı bölümü gizler.
+
+### Antrenör kayıt bağlantısı
+- Yeni `StaffJoinLink` + `/kadro-kayit/<token>`: antrenörler adını, e-postasını
+  ve şifresini kendisi yazıp hesap açar (soyadı bilinmeyen antrenör kendisi yazar).
+- Yetki kapısı olduğu için sıkı: adres 43 karakterlik anahtar, veritabanında
+  yalnız SHA-256 özeti (adres yalnız üretildiği anda görünür), son gün (≤30 gün)
+  ve kullanım sınırı (≤50) zorunlu, yeni bağlantı öncekini kapatır, **rol her
+  zaman antrenör** — yönetici yapmak `/yonetim/kadro`dan rol değiştirmekle olur.
+- Kontenjan yarışı: sayaç okunan değere koşullu güncellenir, kaybeden istek
+  geri alınır.
+- `/yonetim/kayit-linki` üstte antrenör bağlantısı kartı + üretince "gönderilecek
+  liste" (antrenör + sporcu adresleri tek mesaj).
+
+### QR kod
+- `qrcode` paketi. Her açık sporcu bağlantısının altında ekranda QR ve
+  `/yonetim/kayit-linki/qr/<id>` ile baskıya hazır 1024 px PNG (yalnız yönetici,
+  yalnız kendi salonu). Beyaz zemin sabit; okunuşu doğrulandı.
+- `package-lock.json` yalnız yeni paketleri ekler; npm sürüm farkının silmeye
+  çalıştığı `libc` alanlarına dokunulmadı.
+
+### Paket fiyatı
+- `/personel/paketler`: antrenör yalnız **fiyatı** düzeltir (ad, süre, ders
+  adedi, ekleme, arşivleme yönetici işi kalır). Yalnız bundan sonra başlayan
+  üyelikleri etkiler; her değişiklik eski → yeni tutarla denetim kaydına düşer.
+
+### Bilinçli olarak yapılmadı / açık
+- Yönetici listesindeki herkes "koçunuz kim" listesinde çıkar (yönetici ile
+  antrenörü ayıran bir alan yok). Ders vermeyen bir yönetici hesabı varsa
+  sporcu onu seçebilir; sporcu kartından devredilir.
+- Kayıt olana otomatik paket atanmıyor: `MemberJoinLink`'e paket alanı gerekir
+  (mevcut tabloya sütun = migration şart). Paketi olmayan sporcu ders rezerve edemez.
+
 ## Yapıldı (Faz 12 — koç kapsamı, tahsilat ve salon muhasebesi)
 
 Kullanıcı isteği: **"koç ekleme-üye ekleme, her koçun kendi üyesini görmesi

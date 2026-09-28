@@ -63,6 +63,7 @@ model Organization {
   auditLogs         AuditLog[]
   staffInvites      StaffInvite[]
   memberJoinLinks   MemberJoinLink[]
+  staffJoinLinks    StaffJoinLink[]
 
   payments           Payment[]
   expenses           Expense[]
@@ -188,6 +189,10 @@ model Member {
   waivers              MemberWaiver[]
   payments             Payment[]
   coachEarnings        CoachEarning[]
+  /// Kayıt formunda verilen yanıtlar (meslek, günlük yoğunluk, saat tercihi).
+  /// Ayrı tabloda: `Member`a sütun eklemek migration uygulanmadan yayına
+  /// çıkan kodu bütün sporcu sorgularında patlatırdı.
+  registrationAnswer   MemberRegistrationAnswer?
 
   @@unique([organizationId, memberNo])
   @@index([organizationId, assignedCoachUserId])
@@ -1106,4 +1111,59 @@ model CoachPayout {
   earnings CoachEarning[]
 
   @@index([organizationId, coachUserId, paidAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// KAYIT YANITLARI — kayıt formunun "seni tanıyalım" cevapları
+//
+// Sporcu `/katil/<slug>` üzerinden kaydolurken meslek, günlük yoğunluk ve
+// tercih ettiği antrenman saatlerini yazar; antrenör bunu sporcu kartında
+// görür ve ilk görüşmeyi buna göre yapar. `Member` ile 1-1 ilişkidir ama
+// ayrı tabloda durur — bkz. `Member.registrationAnswer`.
+//
+// dailyLoad:      sakin | orta | yogun | cok-yogun
+// preferredTimes: src/domain/registration/answers.ts içindeki saat dilimi anahtarları
+// ─────────────────────────────────────────────────────────────
+model MemberRegistrationAnswer {
+  id                String   @id @default(cuid())
+  memberId          String   @unique
+  member            Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  occupation        String?
+  dailyLoad         String?
+  preferredTimes    String[] @default([])
+  /// Formda seçilen antrenör (boşsa "fark etmez"). Atama `Member.assignedCoachUserId`
+  /// alanında; burası sporcunun ilk tercihini ayrıca korur.
+  chosenCoachUserId String?
+  createdAt         DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────
+// KADRO KAYIT BAĞLANTISI — antrenörler tek bağlantıdan kendi hesabını açar
+//
+// Kişiye özel `StaffInvite` her antrenör için e-posta ister; kadronun
+// e-postaları elde değilken ya da isimlerin bir kısmı belli değilken ("soyadını
+// kendisi yazsın") tek çoğa açık bağlantı daha pratiktir.
+//
+// Bu bağlantı bir YETKİ kapısıdır, bu yüzden `MemberJoinLink`ten farklı olarak:
+//   - adres tahmin edilemez bir anahtardır; veritabanında yalnız SHA-256 özeti
+//     durur (`StaffInvite` ile aynı kural)
+//   - kalıcı değildir: son gün ve kullanım sınırı zorunludur
+//   - açtığı rol HER ZAMAN antrenördür — yönetici yapmak için kadro
+//     listesinden rol değiştirilir, bağlantıdan yönetici hesabı doğmaz
+// ─────────────────────────────────────────────────────────────
+model StaffJoinLink {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tokenHash       String       @unique
+  label           String
+  isActive        Boolean      @default(true)
+  maxUses         Int
+  usedCount       Int          @default(0)
+  expiresAt       DateTime
+  createdByUserId String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([organizationId, isActive])
 }

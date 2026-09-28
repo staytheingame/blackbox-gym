@@ -315,3 +315,50 @@ bağlantısından şifresini kur.
 - [ ] `/personel/beslenme/<id>` → "Başka Sporcuya Kopyala" sonrası hedef
       sporcuda **taslak** plan var, öğünler ve besinler kopyalanmış, öğün
       işaretleri boş.
+
+## Faz 16 — kayıt formu yanıtları, antrenör bağlantısı, QR, paket fiyatı
+
+> Önce `npx prisma migrate deploy` (yeni iki tablo). Uygulanmadan da kayıt
+> çalışır ama yanıtlar sporcu kartına değil denetim kaydına düşer.
+
+### Sporcu kayıt formu (`/katil/<slug>`)
+- [ ] Form şunları soruyor: mesleğin, günlük yoğunluğun, tercih edilen antrenman
+      saatleri (çoklu), koçunuz kim. Meslek/yoğunluk/en az bir saat boşsa gönderilmiyor.
+- [ ] "Koçunuz kim?" listesinde salonun aktif antrenörleri var; başında "Fark
+      etmez" seçili. Listede e-posta ya da başka bilgi görünmüyor.
+- [ ] Bir antrenör seçilerek kayıt olununca sporcu o antrenörün listesinde
+      çıkıyor (`/personel/uyeler` o antrenörle giriş yapılarak).
+- [ ] "Fark etmez" ile kayıt olununca antrenör atanmıyor (havuzda) — bağlantıda
+      varsayılan antrenör tanımlıysa o atanıyor.
+- [ ] Sporcu kartında (`/personel/uyeler/<id>`) "Kayıt Yanıtları" bölümü meslek,
+      yoğunluk, saatler ve seçilen koçu gösteriyor.
+- [ ] Formu elle bozup listede olmayan saat/yoğunluk göndermek reddediliyor.
+
+### Antrenör kayıt bağlantısı (`/yonetim/kayit-linki`)
+- [ ] "Antrenör Bağlantısı Üret" adres gösteriyor; sayfa yenilenince adres
+      GÖRÜNMÜYOR (yalnız özet saklı) ama satır listede duruyor.
+- [ ] Yeni bağlantı üretmek öncekini "Kapalı" yapıyor.
+- [ ] Bağlantıyla kayıt: ad, e-posta, şifre → hesap açılıyor, `/personel`e düşüyor.
+      Rol her zaman **antrenör**; yönetici menüsü açılmıyor.
+- [ ] Kullanım sayısı dolunca / süre bitince / kapatılınca sayfa "Kontenjan doldu /
+      Süresi dolmuş / Bağlantı kapalı" diyor.
+- [ ] Var olan e-postayla kayıt "hesap zaten var" diyor.
+- [ ] Kaydolan antrenör "Koçunuz kim?" listesinde çıkıyor.
+- [ ] `/yonetim/kadro`dan bir antrenörü yöneticiye çevirmek çalışıyor.
+- [ ] Yönetici olmayan biri `/yonetim/kayit-linki`ye giremiyor.
+
+### QR kod
+- [ ] Açık her sporcu bağlantısının altında QR görünüyor; kapalı bağlantıda yok.
+- [ ] Telefon kamerasıyla okutunca kayıt sayfası açılıyor.
+- [ ] "QR'ı İndir (PNG)" dosyayı indiriyor; yazdırılınca da okunuyor.
+- [ ] `/yonetim/kayit-linki/qr/<id>` çıkış yapılmışken 401/giriş; başka salonun
+      bağlantı kimliğiyle 404.
+
+### Paket fiyatı (antrenör)
+- [ ] Antrenör menüsünde Yönetim → "Paket Fiyatları" var.
+- [ ] Fiyatı değiştirip kaydetmek `/yonetim/paketler` ve üyelik başlatma
+      ekranında yeni fiyatı gösteriyor; **mevcut üyeliklerin tutarı değişmiyor**.
+- [ ] Negatif, boş ya da 1.000.000 ₺ üstü fiyat reddediliyor.
+- [ ] Denetim kaydında "Paket fiyatı düzeltildi" satırı eski → yeni tutarla var.
+- [ ] Antrenör bu ekrandan paket ekleyemiyor/kaldıramıyor/süre-ders adedini
+      değiştiremiyor (yalnız fiyat alanı var).

@@ -330,6 +330,14 @@ const STAFF_NAV: PanelNavItem[] = [
         title: "Üyelik & Ödeme Durumu",
       },
       {
+        id: "yonetim-paketler",
+        label: "Paket Fiyatları",
+        href: "/personel/paketler",
+        icon: ShieldIcon,
+        roles: ["staff"],
+        title: "Paket Fiyatları",
+      },
+      {
         id: "yonetim-basvurular",
         label: "Başvurular",
         href: "/personel/basvurular",

@@ -33,6 +33,11 @@ import { getMemberRankState } from "@/lib/queries/ranks";
 import { getMemberWaivers } from "@/lib/queries/waivers";
 import { getMemberFinance } from "@/lib/queries/finance";
 import { getMemberPersonalInfo } from "@/lib/queries/member-profile";
+import { getRegistrationAnswers } from "@/lib/queries/join-links";
+import {
+  dailyLoadLabel,
+  preferredTimeLabel,
+} from "@/domain/registration/answers";
 import { ageFrom } from "@/domain/marketing/meta-matching";
 import { PAYMENT_METHOD_LABEL } from "@/domain/finance/ledger";
 import { summarizeDue, DUE_STATUS_LABEL } from "@/domain/finance/dues";
@@ -95,6 +100,7 @@ export default async function StaffMemberDetailPage({
     waivers,
     finance,
     personal,
+    registrationAnswers,
   ] = await Promise.all([
     listPlanTemplates(membership.organizationId),
     getActiveMemberPlan(member.id, "antrenman"),
@@ -108,6 +114,7 @@ export default async function StaffMemberDetailPage({
     getMemberWaivers(member.id, membership.organizationId),
     getMemberFinance(member.id),
     getMemberPersonalInfo(member.id),
+    getRegistrationAnswers(member.id),
   ]);
 
   // Beyanında "evet" işaretlenmiş maddeler — yüklenme kararından ÖNCE görülmeli.
@@ -248,6 +255,42 @@ export default async function StaffMemberDetailPage({
               {personal.healthNote}
             </p>
           )}
+        </PanelCard>
+      )}
+
+      {registrationAnswers && (
+        <PanelCard
+          title="Kayıt Yanıtları"
+          description="Sporcunun kayıt formunda yazdıkları — ilk görüşmeyi buna göre planla."
+        >
+          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            {[
+              { label: "Meslek", value: registrationAnswers.occupation ?? "" },
+              {
+                label: "Günlük yoğunluk",
+                value: dailyLoadLabel(registrationAnswers.dailyLoad),
+              },
+              {
+                label: "Tercih ettiği saatler",
+                value: registrationAnswers.preferredTimes
+                  .map(preferredTimeLabel)
+                  .join(", "),
+              },
+              {
+                label: "Seçtiği koç",
+                value: registrationAnswers.chosenCoachName ?? "Fark etmez",
+              },
+            ].map((row) => (
+              <div key={row.label} className="flex items-baseline gap-2">
+                <dt className="w-28 shrink-0 text-xs font-bold uppercase tracking-wide text-brand-muted">
+                  {row.label}
+                </dt>
+                <dd className="text-sm text-brand-white">
+                  {row.value || <span className="text-brand-muted">—</span>}
+                </dd>
+              </div>
+            ))}
+          </dl>
         </PanelCard>
       )}
 

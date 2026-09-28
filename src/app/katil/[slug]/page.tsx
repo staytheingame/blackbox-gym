@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { resolveJoinLink } from "@/lib/queries/join-links";
+import {
+  listPublicCoachChoices,
+  resolveJoinLink,
+} from "@/lib/queries/join-links";
 import { getCurrentUser } from "@/lib/auth/guards";
 import { RegisterForm } from "./RegisterForm";
 
@@ -87,6 +90,8 @@ export default async function JoinPage({
     );
   }
 
+  const coaches = await listPublicCoachChoices(link.organizationId);
+
   return (
     <Shell>
       <div className="mt-6 rounded-sm border border-brand-border bg-brand-surface p-6">
@@ -106,7 +111,7 @@ export default async function JoinPage({
         </p>
 
         <div className="mt-6">
-          <RegisterForm slug={link.slug} />
+          <RegisterForm slug={link.slug} coaches={coaches} />
         </div>
       </div>
 

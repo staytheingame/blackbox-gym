@@ -15,6 +15,11 @@ import {
   primaryButtonClass,
   textareaClass,
 } from "@/components/panel/form";
+import {
+  DAILY_LOAD_OPTIONS,
+  PREFERRED_TIME_OPTIONS,
+} from "@/domain/registration/answers";
+import type { CoachChoice } from "@/lib/queries/join-links";
 
 const initialState: RegisterState = {};
 
@@ -29,7 +34,13 @@ const initialState: RegisterState = {};
  * Varsayılanlar İstanbul: şehir ve il dolu gelir, gelen kişi yalnız ilçesini
  * seçer. İstanbul dışından biri alanları değiştirebilir.
  */
-export function RegisterForm({ slug }: { slug: string }) {
+export function RegisterForm({
+  slug,
+  coaches,
+}: {
+  slug: string;
+  coaches: CoachChoice[];
+}) {
   const [state, formAction, pending] = useActionState(
     registerMemberAction,
     initialState,
@@ -239,6 +250,97 @@ export function RegisterForm({ slug }: { slug: string }) {
         </div>
 
         <input type="hidden" name="country" value={DEFAULT_COUNTRY} />
+      </fieldset>
+
+      <fieldset className="space-y-4">
+        <legend className="text-xs font-bold uppercase tracking-[0.15em] text-brand-yellow">
+          Antrenman Tercihin
+        </legend>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="occupation" className={labelClass}>
+              Mesleğin
+            </label>
+            <input
+              id="occupation"
+              name="occupation"
+              required
+              minLength={2}
+              maxLength={80}
+              autoComplete="organization-title"
+              placeholder="Avukat, öğrenci, mühendis…"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="dailyLoad" className={labelClass}>
+              Günlük yoğunluğun
+            </label>
+            <select
+              id="dailyLoad"
+              name="dailyLoad"
+              required
+              defaultValue=""
+              className={inputClass}
+            >
+              <option value="" disabled>
+                Seç
+              </option>
+              {DAILY_LOAD_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <span className={labelClass}>Tercih ettiğin antrenman saatleri</span>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {PREFERRED_TIME_OPTIONS.map((option) => (
+              <label
+                key={option.value}
+                className="flex min-h-11 items-center gap-3 rounded-sm border border-brand-border bg-brand-black/40 px-3 text-sm text-brand-white"
+              >
+                <input
+                  type="checkbox"
+                  name="preferredTimes"
+                  value={option.value}
+                  className="h-5 w-5 shrink-0 accent-brand-yellow"
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+          <p className={hintClass}>
+            Birden fazla seçebilirsin — en az birini işaretle.
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="coachUserId" className={labelClass}>
+            Koçunuz kim?
+          </label>
+          <select
+            id="coachUserId"
+            name="coachUserId"
+            defaultValue=""
+            className={inputClass}
+          >
+            <option value="">Fark etmez — salon atasın</option>
+            {coaches.map((coach) => (
+              <option key={coach.userId} value={coach.userId}>
+                {coach.displayName}
+              </option>
+            ))}
+          </select>
+          <p className={hintClass}>
+            Antrenörünle çalışmaya başladıysan onu seç; henüz görüşmediysen
+            boş bırak.
+          </p>
+        </div>
       </fieldset>
 
       <fieldset className="space-y-4">

@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
 import { absoluteUrl } from "@/lib/app-url";
+import type { RegistrationAnswers } from "@/domain/registration/answers";
 
 /**
  * KAYIT LİNKİ — tek bağlantı, sporcu kendi kaydolur.
@@ -321,10 +322,24 @@ export type SelfRegisterInput = {
   emergencyPhone?: string | null;
   healthNote?: string | null;
   marketingConsent: boolean;
+  /** Meslek, günlük yoğunluk, antrenman saati tercihi. */
+  answers: RegistrationAnswers;
+  /** Formda seçilen antrenör; boş = "fark etmez". Geçerliliği burada denetlenir. */
+  chosenCoachUserId?: string | null;
 };
 
 export type SelfRegisterResult =
-  | { ok: true; userId: string; memberId: string; organizationId: string; fullName: string }
+  | {
+      ok: true;
+      userId: string;
+      memberId: string;
+      organizationId: string;
+      fullName: string;
+      /** Yanıtlar tabloya yazıldı mı. Yazılamadıysa çağıran denetim kaydına düşer. */
+      answersSaved: boolean;
+      /** Sporcunun seçtiği ve geçerli bulunan antrenör (yoksa null). */
+      chosenCoachUserId: string | null;
+    }
   | { ok: false; error: string };
 
 /** "BB-0007" → 7; biçimi bozuksa 0 (yeni numara en büyükten devam eder). */
@@ -401,7 +416,14 @@ export async function registerMemberViaLink(
   }
 
   const passwordHash = await hashPassword(input.password);
-  const assignedCoachUserId = await defaultCoachFor(link.linkId);
+  // Sporcunun seçtiği antrenör linkin varsayılanından önce gelir; ama formdan
+  // gelen kimlik güvenilmez — salonun aktif kadrosunda olmalı.
+  const chosenCoachUserId = await validCoachFor(
+    link.organizationId,
+    input.chosenCoachUserId,
+  );
+  const assignedCoachUserId =
+    chosenCoachUserId ?? (await defaultCoachFor(link.linkId));
   const now = new Date();
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -465,11 +487,21 @@ export async function registerMemberViaLink(
         return { userId: user.id, memberId: member.id };
       });
 
+      // Yanıtlar transaction'ın DIŞINDA yazılır: tablo henüz yoksa (migration
+      // bekliyorsa) kayıt geri alınmasın, kişi kayıt olabilsin.
+      const answersSaved = await saveRegistrationAnswers({
+        memberId: created.memberId,
+        answers: input.answers,
+        chosenCoachUserId,
+      });
+
       return {
         ok: true,
         ...created,
         organizationId: link.organizationId,
         fullName,
+        answersSaved,
+        chosenCoachUserId,
       };
     } catch (error) {
       const isRace =
@@ -494,6 +526,119 @@ export async function registerMemberViaLink(
     ok: false,
     error: "Kayıt şu an yoğun, birkaç saniye sonra tekrar dene.",
   };
+}
+
+const COACH_ROLES = ["coach", "admin", "staff"];
+
+export type CoachChoice = { userId: string; displayName: string };
+
+/**
+ * Kayıt formundaki "koçunuz kim" listesi. Herkese açık sayfada görünür, bu
+ * yüzden yalnız ad döner — e-posta ya da başka bir alan sızmaz. Görünen adı
+ * olmayan hesap listeye girmez.
+ */
+export async function listPublicCoachChoices(
+  organizationId: string,
+): Promise<CoachChoice[]> {
+  const rows = await prisma.organizationUser.findMany({
+    where: {
+      organizationId,
+      status: "active",
+      role: { in: COACH_ROLES },
+    },
+    orderBy: { createdAt: "asc" },
+    select: {
+      userId: true,
+      user: { select: { profile: { select: { displayName: true } } } },
+    },
+  });
+
+  return rows.flatMap((row) => {
+    const displayName = row.user.profile?.displayName?.trim();
+    return displayName ? [{ userId: row.userId, displayName }] : [];
+  });
+}
+
+/** Formdan gelen antrenör kimliği salonun aktif kadrosunda değilse `null`. */
+async function validCoachFor(
+  organizationId: string,
+  userId: string | null | undefined,
+): Promise<string | null> {
+  if (!userId) return null;
+
+  const active = await prisma.organizationUser.findFirst({
+    where: {
+      organizationId,
+      userId,
+      status: "active",
+      role: { in: COACH_ROLES },
+    },
+    select: { userId: true },
+  });
+  return active ? active.userId : null;
+}
+
+async function saveRegistrationAnswers(input: {
+  memberId: string;
+  answers: RegistrationAnswers;
+  chosenCoachUserId: string | null;
+}): Promise<boolean> {
+  try {
+    await prisma.memberRegistrationAnswer.create({
+      data: {
+        memberId: input.memberId,
+        occupation: input.answers.occupation,
+        dailyLoad: input.answers.dailyLoad,
+        preferredTimes: input.answers.preferredTimes,
+        chosenCoachUserId: input.chosenCoachUserId,
+      },
+    });
+    return true;
+  } catch (error) {
+    console.error("[kayit] yanıtlar tabloya yazılamadı", error);
+    return false;
+  }
+}
+
+export type StoredRegistrationAnswers = {
+  occupation: string | null;
+  dailyLoad: string | null;
+  preferredTimes: string[];
+  chosenCoachName: string | null;
+};
+
+/**
+ * Sporcu kartında gösterilecek yanıtlar. Tablo yoksa ya da satır yoksa
+ * `null` — kart bu bölümü göstermez, sayfa düşmez.
+ */
+export async function getRegistrationAnswers(
+  memberId: string,
+): Promise<StoredRegistrationAnswers | null> {
+  try {
+    const row = await prisma.memberRegistrationAnswer.findUnique({
+      where: { memberId },
+    });
+    if (!row) return null;
+
+    let chosenCoachName: string | null = null;
+    if (row.chosenCoachUserId) {
+      const profile = await prisma.profile.findFirst({
+        where: { userId: row.chosenCoachUserId },
+        select: { displayName: true },
+      });
+      chosenCoachName = profile?.displayName ?? null;
+    }
+
+    return {
+      occupation: row.occupation,
+      dailyLoad: row.dailyLoad,
+      preferredTimes: row.preferredTimes,
+      chosenCoachName,
+    };
+  } catch (error) {
+    console.error("[kayit] yanıtlar okunamadı", error);
+    return null;
+  }
 }
 
 /** Link hangi antrenöre bağlıysa o; antrenör hesabı kapanmışsa atanmaz. */

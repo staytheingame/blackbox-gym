@@ -7,6 +7,10 @@ import { registerMemberViaLink } from "@/lib/queries/join-links";
 import { createSession } from "@/lib/auth/session";
 import { recordAudit } from "@/lib/queries/audit";
 import { DEFAULT_COUNTRY } from "@/data/istanbul-districts";
+import {
+  parseRegistrationAnswers,
+  summarizeAnswers,
+} from "@/domain/registration/answers";
 
 /**
  * Kayıt formunun doğrulaması.
@@ -89,6 +93,19 @@ export async function registerMemberAction(
     return { error: parsed.error.issues[0]?.message ?? "Form geçersiz." };
   }
 
+  // Meslek, günlük yoğunluk ve antrenman saati tercihi — hepsi zorunlu: antrenör
+  // ilk görüşmeden önce sporcunun gününü bilsin.
+  const answers = parseRegistrationAnswers({
+    occupation: formData.get("occupation")?.toString() ?? "",
+    dailyLoad: formData.get("dailyLoad")?.toString() ?? "",
+    preferredTimes: formData.getAll("preferredTimes").map(String),
+  });
+  if (!answers.ok) return { error: answers.error };
+
+  // "Fark etmez" seçeneği boş değer gönderir.
+  const chosenCoachUserId =
+    formData.get("coachUserId")?.toString().trim() || null;
+
   // Tarih salon saatine göre değil takvim günü olarak saklanır — doğum günü
   // saat dilimiyle bir gün kaymasın diye UTC gece yarısı.
   const birthDate = new Date(`${parsed.data.birthDate}T00:00:00.000Z`);
@@ -120,6 +137,8 @@ export async function registerMemberAction(
     emergencyPhone: parsed.data.emergencyPhone,
     healthNote: parsed.data.healthNote,
     marketingConsent: parsed.data.marketingConsent === "on",
+    answers: answers.answers,
+    chosenCoachUserId,
   });
 
   if (!result.ok) return { error: result.error };
@@ -131,7 +150,13 @@ export async function registerMemberAction(
     action: "uye.kendi-kaydoldu",
     entityType: "Member",
     entityId: result.memberId,
-    summary: `${result.fullName} kayıt bağlantısıyla (${parsed.data.slug}) kendi kaydını açtı.`,
+    // Yanıtlar tabloya yazılamadıysa (migration bekliyorsa) bilgi kaybolmasın:
+    // özet denetim kaydına düşer, antrenör oradan okuyabilir.
+    summary: `${result.fullName} kayıt bağlantısıyla (${parsed.data.slug}) kendi kaydını açtı.${
+      result.answersSaved
+        ? ""
+        : ` Kayıt yanıtları: ${summarizeAnswers(answers.answers)}.`
+    }`,
   });
 
   // Personelin "yeni kayıt" kuyruğu anında dolsun.

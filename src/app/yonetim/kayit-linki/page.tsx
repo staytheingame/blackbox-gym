@@ -9,6 +9,12 @@ import {
   listSelfRegistered,
 } from "@/lib/queries/join-links";
 import { recordAudit } from "@/lib/queries/audit";
+import {
+  STAFF_LINK_DEFAULT_DAYS,
+  STAFF_LINK_DEFAULT_MAX_USES,
+  listStaffJoinLinks,
+} from "@/lib/queries/staff-join-links";
+import { QrCode } from "@/components/panel/QrCode";
 import { ageFrom } from "@/domain/marketing/meta-matching";
 import { formatDateTR, formatDateTimeTR } from "@/lib/date";
 import {
@@ -24,8 +30,10 @@ import {
   secondaryButtonClass,
 } from "@/components/panel/form";
 import { CreateJoinLinkForm, JoinLinkDefaults } from "./JoinLinkForms";
+import { StaffJoinLinkForm } from "./StaffJoinLinkForm";
 import { JoinLinkBox } from "@/components/panel/JoinLinkBox";
 import { toggleJoinLinkAction } from "./actions";
+import { closeStaffJoinLinkAction } from "./staff-actions";
 
 export const metadata: Metadata = {
   title: "Kayıt Bağlantısı — BlackBox Yönetim",
@@ -73,10 +81,11 @@ export default async function AdminJoinLinkPage() {
     });
   }
 
-  const [links, coaches, registered] = await Promise.all([
+  const [links, coaches, registered, staffLinks] = await Promise.all([
     listJoinLinks(membership.organizationId),
     listCoaches(membership.organizationId),
     listSelfRegistered(membership.organizationId),
+    listStaffJoinLinks(membership.organizationId),
   ]);
 
   const coachOptions = coaches.map((coach) => ({
@@ -89,6 +98,7 @@ export default async function AdminJoinLinkPage() {
   const thirtyDaysAgo = now.getTime() - 30 * 24 * 60 * 60 * 1000;
 
   const usable = links.filter((link) => link.usable);
+  const clientUrls = usable.map((link) => link.url);
   const unassigned = registered.filter((row) => !row.assignedCoachName);
   const last30 = registered.filter(
     (row) => row.registeredAt.getTime() > thirtyDaysAgo,
@@ -129,6 +139,71 @@ export default async function AdminJoinLinkPage() {
           hint="Dağıtılmayı bekliyor"
         />
       </div>
+
+      <PanelCard
+        title="Antrenörler İçin Kayıt Bağlantısı"
+        description="Antrenörler bu bağlantıdan adını, e-postasını ve şifresini kendisi yazarak hesap açar. Sporcular kayıt olurken koçunu bu kadrodan seçer — o yüzden önce antrenörler kayıt olmalı."
+      >
+        {staffLinks === null ? (
+          <EmptyState>
+            Bu bölüm veritabanı güncellemesini bekliyor. Bilgisayarda proje
+            klasöründe <code>npx prisma migrate deploy</code> çalıştırıldığında
+            açılır; sporcu kayıt bağlantısı bundan etkilenmez.
+          </EmptyState>
+        ) : (
+          <div className="space-y-5">
+            <StaffJoinLinkForm
+              defaultMaxUses={STAFF_LINK_DEFAULT_MAX_USES}
+              defaultDays={STAFF_LINK_DEFAULT_DAYS}
+              clientUrls={clientUrls}
+            />
+
+            {staffLinks.length > 0 && (
+              <ul className="divide-y divide-brand-border border-t border-brand-border pt-2">
+                {staffLinks.map((row) => (
+                  <li
+                    key={row.id}
+                    className="flex flex-wrap items-center justify-between gap-3 py-3"
+                  >
+                    <div>
+                      <div className="text-sm font-semibold text-brand-white">
+                        {row.label}
+                      </div>
+                      <div className="text-xs text-brand-muted">
+                        {row.usedCount}/{row.maxUses} kişi kaydoldu · son gün{" "}
+                        {formatDateTR(row.expiresAt)} ·{" "}
+                        {formatDateTR(row.createdAt)} tarihinde açıldı
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {row.usable ? (
+                        <Pill tone="yellow">Açık</Pill>
+                      ) : (
+                        <Pill tone="danger">
+                          {!row.isActive
+                            ? "Kapalı"
+                            : row.expiresAt <= now
+                              ? "Süresi doldu"
+                              : "Kontenjan doldu"}
+                        </Pill>
+                      )}
+                      {row.usable && (
+                        <form
+                          action={closeStaffJoinLinkAction.bind(null, row.id)}
+                        >
+                          <button type="submit" className={rowButtonClass}>
+                            Kapat
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </PanelCard>
 
       <PanelCard
         title="Yeni Bağlantı Üret"
@@ -202,6 +277,34 @@ export default async function AdminJoinLinkPage() {
                 </div>
 
                 <JoinLinkBox url={link.url} label="Paylaşılacak adres" />
+
+                {/* QR: salon girişine basılıp okutulsun. Yalnız açık bağlantıda
+                    anlamlı — kapalı bağlantının QR'ı boş bir sayfaya götürür. */}
+                {link.usable && (
+                  <div className="flex flex-wrap items-center gap-4 rounded-sm border border-brand-border bg-brand-black/30 p-4">
+                    <QrCode
+                      value={link.url}
+                      size={160}
+                      label={`${link.label} kayıt bağlantısı QR kodu`}
+                    />
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold uppercase tracking-wide text-brand-yellow">
+                        QR kod
+                      </p>
+                      <p className="max-w-xs text-xs leading-relaxed text-brand-muted">
+                        Telefon kamerasıyla okutan kayıt sayfasına gider.
+                        Baskıya hazır PNG&apos;yi indirip salon girişine asabilirsin.
+                      </p>
+                      <a
+                        href={`/yonetim/kayit-linki/qr/${link.id}`}
+                        download
+                        className={rowButtonClass}
+                      >
+                        QR&apos;ı İndir (PNG)
+                      </a>
+                    </div>
+                  </div>
+                )}
 
                 <JoinLinkDefaults
                   linkId={link.id}
