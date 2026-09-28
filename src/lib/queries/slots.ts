@@ -50,6 +50,8 @@ export type MembershipCredits = {
   daysLeft: number;
   total: number | null;
   used: number;
+  /** `used`un içinde gelmediği için yanan dersler. */
+  burned: number;
   reserved: number;
   remaining: number | null;
   unlimited: boolean;

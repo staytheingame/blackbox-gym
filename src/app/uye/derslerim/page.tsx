@@ -5,6 +5,7 @@ import { getCurrentMember, getCurrentUser } from "@/lib/auth/guards";
 import { SLOT_KIND_LABEL, listMemberBookings } from "@/lib/queries/slots";
 import {
   BOOKING_STATUS_LABEL,
+  bookingDisplayLabel,
   canCancelBooking,
   CANCEL_CUTOFF_HOURS,
 } from "@/domain/booking/credits";
@@ -67,9 +68,10 @@ export default async function MemberBookingsPage() {
         <StatCard label="Yaklaşan" value={upcoming.length} />
         <StatCard label="Katıldığın" value={attendance.attended} />
         <StatCard
-          label="Gelmediğin"
+          label="Yanan Ders"
           value={attendance.missed}
           highlight={attendance.missed > 0}
+          hint="Gelmediğin, hakkı giden dersler"
         />
         <StatCard
           label="Katılım Oranı"
@@ -177,7 +179,7 @@ export default async function MemberBookingsPage() {
                         : "neutral"
                   }
                 >
-                  {BOOKING_STATUS_LABEL[booking.status]}
+                  {bookingDisplayLabel(booking.status, booking.startsAt, now)}
                 </Pill>
               </li>
             ))}

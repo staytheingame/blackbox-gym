@@ -180,7 +180,7 @@ export default async function MemberProgramPage({
           highlight={noCredits}
           hint={
             credits && !credits.unlimited
-              ? `${credits.used} kullanıldı · ${credits.reserved} rezerve`
+              ? `${credits.used} kullanıldı${credits.burned > 0 ? ` (${credits.burned} yanan)` : ""} · ${credits.reserved} rezerve`
               : undefined
           }
         />

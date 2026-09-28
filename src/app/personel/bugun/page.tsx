@@ -85,7 +85,7 @@ function MemberRow({
           iki dar hedef olarak değil. */}
       <div className="flex flex-wrap items-center gap-2">
         {row.status === "katildi" && <Pill tone="yellow">Geldi</Pill>}
-        {row.status === "gelmedi" && <Pill tone="danger">Gelmedi</Pill>}
+        {row.status === "gelmedi" && <Pill tone="danger">Yanan ders</Pill>}
 
         {row.status === "onayli" && !slotPast && (
           <RemindButton

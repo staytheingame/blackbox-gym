@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  BOOKING_STATUS_LABEL,
+  bookingDisplayLabel,
   canCancelBooking,
   evaluateBooking,
   summarizeCredits,
@@ -23,6 +25,37 @@ describe("summarizeCredits", () => {
     expect(
       summarizeCredits({ total: 10, bookingStatuses: ["gelmedi"] }).used,
     ).toBe(1);
+  });
+
+  it("gelmeyen dersi yanan ders olarak ayrıca sayar", () => {
+    const summary = summarizeCredits({
+      total: 10,
+      bookingStatuses: ["katildi", "gelmedi", "gelmedi", "onayli"],
+    });
+
+    expect(summary.used).toBe(3);
+    expect(summary.burned).toBe(2);
+    expect(summary.reserved).toBe(1);
+    expect(summary.remaining).toBe(6);
+  });
+
+  it("katılınan ve iptal edilen ders yanmaz", () => {
+    const summary = summarizeCredits({
+      total: 10,
+      bookingStatuses: ["katildi", "iptal", "reddedildi", "onayli"],
+    });
+
+    expect(summary.burned).toBe(0);
+  });
+
+  it("sınırsız pakette de yanan ders sayılır", () => {
+    const summary = summarizeCredits({
+      total: null,
+      bookingStatuses: ["gelmedi"],
+    });
+
+    expect(summary.unlimited).toBe(true);
+    expect(summary.burned).toBe(1);
   });
 
   it("ileri tarihli rezervasyonları ayrılmış gösterir, harcanmış değil", () => {
@@ -214,5 +247,25 @@ describe("canCancelBooking", () => {
     expect(
       canCancelBooking(new Date("2026-08-18T12:00:00.000Z"), NOW),
     ).toBe(true);
+  });
+});
+
+describe("bookingDisplayLabel", () => {
+  it("gelmedi kaydını yanan ders diye adlandırır", () => {
+    expect(BOOKING_STATUS_LABEL.gelmedi).toBe("Yanan ders");
+    expect(bookingDisplayLabel("gelmedi", EARLIER, NOW)).toBe("Yanan ders");
+  });
+
+  it("saati geçmiş ama yoklaması alınmamış rezervasyonu bekliyor gösterir", () => {
+    expect(bookingDisplayLabel("onayli", EARLIER, NOW)).toBe("Yoklama bekliyor");
+  });
+
+  it("ileri tarihli rezervasyon rezerve kalır", () => {
+    expect(bookingDisplayLabel("onayli", LATER, NOW)).toBe("Rezerve");
+  });
+
+  it("yoklaması alınmış kayıtların adı saate bağlı değişmez", () => {
+    expect(bookingDisplayLabel("katildi", EARLIER, NOW)).toBe("Katıldı");
+    expect(bookingDisplayLabel("iptal", EARLIER, NOW)).toBe("İptal");
   });
 });

@@ -359,6 +359,36 @@ vermek on tur sürüyordu. Dar ekranda ise takvim büsbütün gizleniyordu.
   besinleriyle kopyalanır, kopya **taslak** doğar (yanlış kalori yayına
   düşmesin). Öğün işaretleri kopyalanmaz.
 
+## Yapıldı (Faz 15 — kayıt linki elle iş çıkarmasın, yanan ders)
+
+**Sorun:** kayıt linki vardı ama iki yerde hâlâ elle iş çıkarıyordu: bağlantıyı
+önce yöneticinin üretmesi gerekiyordu, gelenler varsayılan "aday" düştüğü için
+tek tek üyeye çevrilmeleri bekleniyordu. Gelmeyen dersin hakkı zaten
+yanıyordu ama sporcuya "Gelmedi" diye görünüyordu; yanan ders ayrı sayılmıyordu.
+
+### Kayıt linki
+- Yeni bağlantı formunda varsayılan **doğrudan üye** (eskiden aday). Var olan
+  bağlantıların durumuna dokunulmadı; satırdaki seçimle değiştirilir.
+- `/yonetim/kayit-linki` açıldığında salonun hiç bağlantısı yoksa
+  `ensureDefaultJoinLink` "Genel kayıt bağlantısı"nı kendiliğinden üretir.
+- Şema değişmedi → canlı DB'ye migration gerekmiyor.
+- Kayıt olanın ders hakkı yine paket tanımlanınca açılır; paketi olmayan ders
+  rezerve edemez (`uyelik-yok`). Otomatik paket ataması için `MemberJoinLink`'e
+  paket alanı gerekir — migration ister, bilinçli olarak yapılmadı.
+
+### Yanan ders
+- `gelmedi` durumunun görünen adı **"Yanan ders"** (`BOOKING_STATUS_LABEL`).
+  Hak yakma kuralı değişmedi: yoklamada "Gelmedi" işaretlenince hak gider.
+- `summarizeCredits` artık `burned` döndürür (`used`un içinde sayılır).
+- Sporcu: `/uye/derslerim` "Yanan Ders" kartı, `/uye/uyelik` "Yanan Ders" kartı
+  ve açıklama, `/uye/program` kalan-ders ipucu.
+- Personel: üyelik listesinde "(N yanan)", yoklama ve bugün ekranlarında
+  "Yanan ders" etiketi. Yoklama düğmesi "Gelmedi" olarak kaldı.
+- Saati geçmiş ama yoklaması alınmamış rezervasyon artık "Rezerve" değil
+  "Yoklama bekliyor" görünür (`bookingDisplayLabel`).
+- Otomatik yakma yok: yoklama alınmayan ders kendiliğinden yanmaz, antrenör
+  işaretleyene kadar rezerve sayılmaya devam eder.
+
 ## Yapıldı (Faz 12 — koç kapsamı, tahsilat ve salon muhasebesi)
 
 Kullanıcı isteği: **"koç ekleme-üye ekleme, her koçun kendi üyesini görmesi

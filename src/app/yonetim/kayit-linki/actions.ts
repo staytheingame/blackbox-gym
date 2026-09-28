@@ -19,7 +19,7 @@ const createSchema = z.object({
   label: z.string().trim().min(3, "Bağlantıya bir ad ver (ör. Resepsiyon QR)."),
   slug: z.string().trim().max(40).optional(),
   defaultCoachUserId: z.string().trim().optional(),
-  defaultStatus: z.enum(["lead", "active"]).default("lead"),
+  defaultStatus: z.enum(["lead", "active"]).default("active"),
   maxUses: z.coerce.number().int().min(1).max(5000).optional(),
   expiresAt: z
     .string()
@@ -51,7 +51,7 @@ export async function createJoinLinkAction(
     label: formData.get("label"),
     slug: formData.get("slug")?.toString() || undefined,
     defaultCoachUserId: formData.get("defaultCoachUserId")?.toString() || undefined,
-    defaultStatus: formData.get("defaultStatus")?.toString() || "lead",
+    defaultStatus: formData.get("defaultStatus")?.toString() || "active",
     maxUses: formData.get("maxUses")?.toString() || undefined,
     expiresAt: formData.get("expiresAt")?.toString() || undefined,
   });

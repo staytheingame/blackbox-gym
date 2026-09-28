@@ -5,7 +5,8 @@
  * tükenir:
  *   - Rezervasyon YAPMAK hakkı harcamaz, **ayırır** (henüz seans olmadı).
  *   - Seans sonrası "katıldı" ya da "gelmedi" işaretlenince hak harcanır.
- *     Gelmemek de hak yakar — salon o saati tuttu.
+ *     Gelmemek de hak yakar — salon o saati tuttu. Bu ders **yanan ders**
+ *     olarak ayrıca sayılır ve sporcuya öyle gösterilir.
  *   - Seanstan önce iptal ayrılan hakkı geri verir.
  *
  * Böylece sporcunun gördüğü "kalan ders" sayısı hem geçmişi hem ileriye
@@ -28,8 +29,28 @@ export const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
   reddedildi: "Reddedildi",
   iptal: "İptal",
   katildi: "Katıldı",
-  gelmedi: "Gelmedi",
+  /** Gelmeyen sporcunun hakkı yanar — ekranlarda bu adla görünür. */
+  gelmedi: "Yanan ders",
 };
+
+/** Seans saati geçmiş ama yoklaması henüz alınmamış rezervasyon. */
+export const PENDING_ATTENDANCE_LABEL = "Yoklama bekliyor";
+
+/**
+ * Listede gösterilecek ad. Saati geçmiş ama yoklaması alınmamış "rezerve"
+ * kaydı "Rezerve" diye kalırsa sporcu dersin ne olduğunu anlamaz; ne
+ * "katıldı" ne "yandı" denebilir — yoklama bekliyor.
+ */
+export function bookingDisplayLabel(
+  status: BookingStatus,
+  startsAt: Date,
+  now: Date,
+): string {
+  if (status === "onayli" && startsAt.getTime() <= now.getTime()) {
+    return PENDING_ATTENDANCE_LABEL;
+  }
+  return BOOKING_STATUS_LABEL[status];
+}
 
 /** Hakkı fiilen harcayan durumlar (yoklama alınmış). */
 export function consumesCredit(status: BookingStatus): boolean {
@@ -46,6 +67,8 @@ export type CreditSummary = {
   total: number | null;
   /** Yoklaması alınmış dersler (katıldı + gelmedi). */
   used: number;
+  /** Bunlardan gelmediği için yanan dersler — `used`un içinde sayılır. */
+  burned: number;
   /** İleri tarihli rezervasyonlar ve onay bekleyen istekler. */
   reserved: number;
   /** Yeni rezervasyon için kalan hak; sınırsız pakette `null`. */
@@ -58,12 +81,16 @@ export function summarizeCredits(input: {
   bookingStatuses: BookingStatus[];
 }): CreditSummary {
   const used = input.bookingStatuses.filter(consumesCredit).length;
+  const burned = input.bookingStatuses.filter(
+    (status) => status === "gelmedi",
+  ).length;
   const reserved = input.bookingStatuses.filter(reservesCredit).length;
   const unlimited = input.total === null;
 
   return {
     total: input.total,
     used,
+    burned,
     reserved,
     remaining: unlimited ? null : Math.max((input.total ?? 0) - used - reserved, 0),
     unlimited,

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getCurrentMember, getCurrentUser } from "@/lib/auth/guards";
 import { getMembershipCredits } from "@/lib/queries/slots";
 import { listMemberSubscriptions } from "@/lib/queries/memberships";
+import { CANCEL_CUTOFF_HOURS } from "@/domain/booking/credits";
 import { formatDateTR } from "@/lib/date";
 import {
   EmptyState,
@@ -54,7 +55,7 @@ export default async function MemberMembershipPage() {
     >
       {credits ? (
         <>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
             <StatCard label="Paket" value={credits.planName} />
             <StatCard
               label="Kalan Gün"
@@ -77,12 +78,18 @@ export default async function MemberMembershipPage() {
               value={credits.reserved}
               hint="İleri tarihli derslerin"
             />
+            <StatCard
+              label="Yanan Ders"
+              value={credits.burned}
+              highlight={credits.burned > 0}
+              hint="Gelmediğin, hakkı giden dersler"
+            />
           </div>
 
           {usedPercent !== null && (
             <PanelCard
               title="Paket Kullanımı"
-              description={`${credits.used} ders kullanıldı, ${credits.reserved} ders rezerve edildi.`}
+              description={`${credits.used} ders kullanıldı${credits.burned > 0 ? ` (${credits.burned} tanesi yanan ders)` : ""}, ${credits.reserved} ders rezerve edildi.`}
             >
               <div
                 className="h-3 w-full overflow-hidden rounded-sm border border-brand-border bg-brand-black"
@@ -95,8 +102,10 @@ export default async function MemberMembershipPage() {
                 />
               </div>
               <p className="mt-2 text-xs text-brand-muted">
-                Ders hakkı yoklama alınınca düşer. Gelmediğin ders de hakkını
-                yakar; seanstan önce iptal edersen hakkın geri döner.
+                Ders hakkı yoklama alınınca düşer. Gelmediğin ders yanan ders
+                olarak görünür ve hakkın geri gelmez; seanstan{" "}
+                {CANCEL_CUTOFF_HOURS} saat öncesine kadar iptal edersen hakkın
+                geri döner.
               </p>
             </PanelCard>
           )}

@@ -4,9 +4,11 @@ import { redirect } from "next/navigation";
 import { getCurrentUser, requireAdmin } from "@/lib/auth/guards";
 import { listCoaches } from "@/lib/queries/admin";
 import {
+  ensureDefaultJoinLink,
   listJoinLinks,
   listSelfRegistered,
 } from "@/lib/queries/join-links";
+import { recordAudit } from "@/lib/queries/audit";
 import { ageFrom } from "@/domain/marketing/meta-matching";
 import { formatDateTR, formatDateTimeTR } from "@/lib/date";
 import {
@@ -53,6 +55,23 @@ export default async function AdminJoinLinkPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/giris");
   const membership = await requireAdmin(user.id);
+
+  // Hiç bağlantı yoksa kendiliğinden bir tane hazır olsun.
+  const created = await ensureDefaultJoinLink({
+    organizationId: membership.organizationId,
+    createdByUserId: user.id,
+  });
+  if (created?.ok) {
+    await recordAudit({
+      organizationId: membership.organizationId,
+      actorUserId: user.id,
+      actorLabel: user.displayName,
+      action: "kayit-linki.uretildi",
+      entityType: "MemberJoinLink",
+      entityId: created.id,
+      summary: `Genel kayıt bağlantısı kendiliğinden hazırlandı (/katil/${created.slug}).`,
+    });
+  }
 
   const [links, coaches, registered] = await Promise.all([
     listJoinLinks(membership.organizationId),

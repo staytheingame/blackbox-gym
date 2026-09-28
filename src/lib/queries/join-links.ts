@@ -21,9 +21,10 @@ import { absoluteUrl } from "@/lib/app-url";
  *   - kanal ölçülür → `Member.joinLinkId` hangi linkten geldiğini tutar
  *
  * Kötüye kullanım: link herkese açıktır, yani sahte kayıt açılabilir. Bunun
- * karşılığı silme değil, **durum**: bu yoldan gelen kayıt varsayılan olarak
- * `lead` (aday) açılır ve personel onaylayana kadar üye sayılmaz — ders hakkı,
- * üyelik ve ödeme personel eliyle başlar.
+ * karşılığı silme ya da elle onay değil, **hak**: kayıt olan varsayılan olarak
+ * doğrudan üye açılır (kimse tek tek onaylamakla uğraşmaz) ama ders hakkı
+ * yalnız personelin tanımladığı pakette vardır — paketi olmayan kayıt ders
+ * rezerve edemez. Bir link "aday" olarak da açılabilir (`defaultStatus`).
  */
 
 const SLUG_PATTERN = /^[a-z0-9-]{3,40}$/;
@@ -187,6 +188,43 @@ export async function createJoinLink(
   });
 
   return { ok: true, id: row.id, slug: row.slug, url: await joinUrl(row.slug) };
+}
+
+/** Panel ilk açıldığında kendiliğinden üretilen bağlantının adı. */
+export const DEFAULT_JOIN_LINK_LABEL = "Genel kayıt bağlantısı";
+
+/**
+ * Salonun hiç kayıt bağlantısı yoksa bir tane üretir — "önce link üret" adımı
+ * da elle iş olmasın. Var olan bağlantıya dokunmaz; iki ekran aynı anda
+ * açılırsa oluşan ikinci bağlantı zararsızdır (yönetici birini kapatır).
+ * Üretildiyse bağlantıyı döndürür.
+ */
+export async function ensureDefaultJoinLink(input: {
+  organizationId: string;
+  createdByUserId: string;
+}): Promise<SaveJoinLinkResult | null> {
+  const existing = await prisma.memberJoinLink.count({
+    where: { organizationId: input.organizationId },
+  });
+  if (existing > 0) return null;
+
+  const organization = await prisma.organization.findUnique({
+    where: { id: input.organizationId },
+    select: { name: true },
+  });
+
+  try {
+    return await createJoinLink({
+      organizationId: input.organizationId,
+      label: DEFAULT_JOIN_LINK_LABEL,
+      slug: organization ? `${organization.name} kayit` : undefined,
+      defaultStatus: "active",
+      createdByUserId: input.createdByUserId,
+    });
+  } catch {
+    // Aynı anda başka bir istek üretmiş olabilir; ekran zaten listeyi okuyacak.
+    return null;
+  }
 }
 
 export async function setJoinLinkActive(

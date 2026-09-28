@@ -88,14 +88,16 @@ export function CreateJoinLinkForm({ coaches }: { coaches: CoachChoice[] }) {
             <select
               id="defaultStatus"
               name="defaultStatus"
-              defaultValue="lead"
+              defaultValue="active"
               className={inputClass}
             >
-              <option value="lead">Aday (önerilen)</option>
-              <option value="active">Doğrudan üye</option>
+              <option value="active">Doğrudan üye (önerilen)</option>
+              <option value="lead">Aday</option>
             </select>
             <p className={hintClass}>
-              Aday: ders hakkı yok, antrenör görüşüp üyeliği başlatır.
+              Doğrudan üye: kayıt olan kimse elle onay beklemez, listede üye
+              görünür. Ders hakkı paket tanımlanınca açılır. Aday seçersen
+              antrenör görüşüp üyeliği başlatır.
             </p>
           </div>
 

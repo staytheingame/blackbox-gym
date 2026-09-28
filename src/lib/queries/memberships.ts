@@ -57,6 +57,7 @@ export type MembershipOverview = {
     daysLeft: number;
     sessionsTotal: number | null;
     sessionsUsed: number;
+    sessionsBurned: number;
     sessionsReserved: number;
     sessionsRemaining: number | null;
     currency: string;
@@ -171,6 +172,7 @@ export async function getMembershipOverview(
       daysLeft,
       sessionsTotal: credits.total,
       sessionsUsed: credits.used,
+      sessionsBurned: credits.burned,
       sessionsReserved: credits.reserved,
       sessionsRemaining: credits.remaining,
       currency: row.currency,

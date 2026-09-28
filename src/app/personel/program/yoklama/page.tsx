@@ -90,7 +90,7 @@ export default async function StaffAttendancePage() {
                             alınıyor, iki seçenek mobilde yarım genişlik. */}
                         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                           {seat.status === "katildi" && <Pill tone="yellow">Katıldı</Pill>}
-                          {seat.status === "gelmedi" && <Pill tone="danger">Gelmedi</Pill>}
+                          {seat.status === "gelmedi" && <Pill tone="danger">Yanan ders</Pill>}
                           <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
                             <form
                               action={markAttendanceAction.bind(

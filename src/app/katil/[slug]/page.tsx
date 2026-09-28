@@ -100,8 +100,9 @@ export default async function JoinPage({
           Bilgilerini bir kez yaz, şifreni kendin belirle — hesabın anında
           açılır. Sonrasında ders saatlerini görebilir, boş saatlerden
           rezervasyon yapabilir ve programını takip edebilirsin.
-          {link.defaultStatus === "lead" &&
-            " Antrenörün seninle iletişime geçip üyeliğini başlatacak."}
+          {link.defaultStatus === "lead"
+            ? " Antrenörün seninle iletişime geçip üyeliğini başlatacak."
+            : " Ders rezervasyonu, salon ders paketini tanımladığında açılır."}
         </p>
 
         <div className="mt-6">

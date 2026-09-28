@@ -198,7 +198,7 @@ export default async function StaffMembershipsPage() {
                     <div className="mt-1 text-xs text-brand-muted">
                       {subscription.sessionsTotal === null
                         ? "Sınırsız ders"
-                        : `${subscription.sessionsUsed}/${subscription.sessionsTotal} ders kullanıldı · ${subscription.sessionsReserved} rezerve · ${subscription.sessionsRemaining} kaldı`}
+                        : `${subscription.sessionsUsed}/${subscription.sessionsTotal} ders kullanıldı${subscription.sessionsBurned > 0 ? ` (${subscription.sessionsBurned} yanan)` : ""} · ${subscription.sessionsReserved} rezerve · ${subscription.sessionsRemaining} kaldı`}
                     </div>
                     {subscription.priceMinor > 0 && (
                       <div className="mt-1 text-xs text-brand-muted">
