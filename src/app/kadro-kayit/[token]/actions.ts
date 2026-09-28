@@ -4,6 +4,7 @@ import { z } from "zod";
 import { redirect } from "next/navigation";
 import { registerStaffViaLink } from "@/lib/queries/staff-join-links";
 import { createSession } from "@/lib/auth/session";
+import { homePathForRole } from "@/lib/auth/roles";
 import { recordAudit } from "@/lib/queries/audit";
 
 const registerSchema = z
@@ -22,9 +23,9 @@ const registerSchema = z
 export type StaffRegisterState = { error?: string };
 
 /**
- * Antrenör kendi hesabını açar. Başarılı olursa oturum hemen başlar ve
- * antrenör paneline düşer. Rol her zaman antrenördür — yönetici yapmak
- * kadro listesinden rol değiştirmekle olur.
+ * Antrenör ya da yönetici kendi hesabını açar. Rol formdan gelmez; bağlantının
+ * kendisinden okunur — bağlantıyı yalnız yönetici üretebilir. Başarılı olursa
+ * oturum hemen başlar ve rolünün paneline düşer.
  */
 export async function registerStaffAction(
   _prevState: StaffRegisterState,
@@ -56,9 +57,11 @@ export async function registerStaffAction(
     action: "personel.hesap-kuruldu",
     entityType: "OrganizationUser",
     entityId: result.userId,
-    summary: `${parsed.data.fullName} kadro kayıt bağlantısıyla antrenör hesabını kurdu.`,
+    summary: `${parsed.data.fullName} kadro kayıt bağlantısıyla ${
+      result.role === "admin" ? "yönetici" : "antrenör"
+    } hesabını kurdu.`,
   });
 
   await createSession({ userId: result.userId });
-  redirect("/personel");
+  redirect(homePathForRole(result.role));
 }

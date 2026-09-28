@@ -3,6 +3,10 @@
 import { useActionState } from "react";
 import { registerStaffAction, type StaffRegisterState } from "./actions";
 import {
+  STAFF_LINK_ROLE_LABEL,
+  type StaffLinkRole,
+} from "@/domain/registration/staff-link";
+import {
   hintClass,
   inputClass,
   labelClass,
@@ -11,7 +15,13 @@ import {
 
 const initialState: StaffRegisterState = {};
 
-export function StaffRegisterForm({ token }: { token: string }) {
+export function StaffRegisterForm({
+  token,
+  role,
+}: {
+  token: string;
+  role: StaffLinkRole;
+}) {
   const [state, formAction, pending] = useActionState(
     registerStaffAction,
     initialState,
@@ -91,7 +101,9 @@ export function StaffRegisterForm({ token }: { token: string }) {
       )}
 
       <button type="submit" disabled={pending} className={`${primaryButtonClass} w-full`}>
-        {pending ? "Hesabın açılıyor…" : "Antrenör Hesabımı Aç"}
+        {pending
+          ? "Hesabın açılıyor…"
+          : `${STAFF_LINK_ROLE_LABEL[role]} Hesabımı Aç`}
       </button>
     </form>
   );

@@ -9,11 +9,8 @@ import {
   listSelfRegistered,
 } from "@/lib/queries/join-links";
 import { recordAudit } from "@/lib/queries/audit";
-import {
-  STAFF_LINK_DEFAULT_DAYS,
-  STAFF_LINK_DEFAULT_MAX_USES,
-  listStaffJoinLinks,
-} from "@/lib/queries/staff-join-links";
+import { listStaffJoinLinks } from "@/lib/queries/staff-join-links";
+import { STAFF_LINK_ROLE_LABEL } from "@/domain/registration/staff-link";
 import { QrCode } from "@/components/panel/QrCode";
 import { ageFrom } from "@/domain/marketing/meta-matching";
 import { formatDateTR, formatDateTimeTR } from "@/lib/date";
@@ -141,8 +138,8 @@ export default async function AdminJoinLinkPage() {
       </div>
 
       <PanelCard
-        title="Antrenörler İçin Kayıt Bağlantısı"
-        description="Antrenörler bu bağlantıdan adını, e-postasını ve şifresini kendisi yazarak hesap açar. Sporcular kayıt olurken koçunu bu kadrodan seçer — o yüzden önce antrenörler kayıt olmalı."
+        title="Antrenör ve Yönetici Kayıt Bağlantıları"
+        description="Antrenörler ve yöneticiler bu bağlantılardan adını, e-postasını ve şifresini kendisi yazarak hesap açar. Sporcular kayıt olurken koçunu bu kadrodan seçer — o yüzden önce antrenörler kayıt olmalı."
       >
         {staffLinks === null ? (
           <EmptyState>
@@ -152,11 +149,7 @@ export default async function AdminJoinLinkPage() {
           </EmptyState>
         ) : (
           <div className="space-y-5">
-            <StaffJoinLinkForm
-              defaultMaxUses={STAFF_LINK_DEFAULT_MAX_USES}
-              defaultDays={STAFF_LINK_DEFAULT_DAYS}
-              clientUrls={clientUrls}
-            />
+            <StaffJoinLinkForm clientUrls={clientUrls} />
 
             {staffLinks.length > 0 && (
               <ul className="divide-y divide-brand-border border-t border-brand-border pt-2">
@@ -168,6 +161,9 @@ export default async function AdminJoinLinkPage() {
                     <div>
                       <div className="text-sm font-semibold text-brand-white">
                         {row.label}
+                        <span className="ml-2 text-[0.7rem] font-normal text-brand-muted">
+                          {STAFF_LINK_ROLE_LABEL[row.role]}
+                        </span>
                       </div>
                       <div className="text-xs text-brand-muted">
                         {row.usedCount}/{row.maxUses} kişi kaydoldu · son gün{" "}

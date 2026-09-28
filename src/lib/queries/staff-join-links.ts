@@ -4,6 +4,11 @@ import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
 import { absoluteUrl } from "@/lib/app-url";
 import { generateToken, hashToken } from "@/lib/queries/invite-token";
+import {
+  clampStaffLink,
+  normalizeStaffLinkRole,
+  type StaffLinkRole,
+} from "@/domain/registration/staff-link";
 
 /**
  * KADRO KAYIT BAĞLANTISI — antrenörler tek bağlantıdan kendi hesabını açar.
@@ -19,14 +24,10 @@ import { generateToken, hashToken } from "@/lib/queries/invite-token";
  *     SHA-256 özeti durur, yani adres sonradan panelde tekrar gösterilemez
  *     (kaybolursa yenisi üretilir, eskisi kapanır)
  *   - son gün ve kullanım sınırı zorunlu
- *   - açtığı rol HER ZAMAN antrenör — yönetici yapmak kadro listesinden
- *     rol değiştirmekle olur, bağlantıdan yönetici hesabı doğmaz
+ *   - iki rol var: antrenör (10 kişi / 14 gün varsayılan) ve yönetici
+ *     (1 kişi / 3 gün varsayılan, en fazla 3 kişi / 7 gün). Bağlantıyı yalnız
+ *     yönetici üretir; bilinmeyen rol değeri antrenöre iner, yöneticiye çıkmaz.
  */
-
-export const STAFF_LINK_DEFAULT_MAX_USES = 10;
-export const STAFF_LINK_DEFAULT_DAYS = 14;
-export const STAFF_LINK_MAX_USES_CAP = 50;
-export const STAFF_LINK_MAX_DAYS_CAP = 30;
 
 export async function staffJoinUrl(token: string): Promise<string> {
   return absoluteUrl(`/kadro-kayit/${token}`);
@@ -35,6 +36,7 @@ export async function staffJoinUrl(token: string): Promise<string> {
 export type StaffJoinLinkRow = {
   id: string;
   label: string;
+  role: StaffLinkRole;
   isActive: boolean;
   maxUses: number;
   usedCount: number;
@@ -62,6 +64,7 @@ export async function listStaffJoinLinks(
     return rows.map((row) => ({
       id: row.id,
       label: row.label,
+      role: normalizeStaffLinkRole(row.role),
       isActive: row.isActive,
       maxUses: row.maxUses,
       usedCount: row.usedCount,
@@ -81,25 +84,31 @@ export type CreateStaffJoinLinkResult =
   | { ok: false; error: string };
 
 /**
- * Yeni kadro bağlantısı üretir ve öncekileri KAPATIR: dolaşımda tek geçerli
- * bağlantı kalsın, kaybolan eski bir adres kapı olarak açık durmasın.
+ * Yeni kadro bağlantısı üretir ve AYNI ROLDEKİ öncekileri KAPATIR: her rolde
+ * dolaşımda tek geçerli bağlantı kalsın, kaybolan eski bir adres kapı olarak
+ * açık durmasın. Antrenör bağlantısı üretmek yönetici bağlantısını kapatmaz.
+ * Kişi ve gün sayısı rolün sınırlarına çekilir (yönetici: en fazla 3 / 7).
  */
 export async function createStaffJoinLink(input: {
   organizationId: string;
   label: string;
+  role: StaffLinkRole;
   maxUses: number;
   days: number;
   createdByUserId: string;
 }): Promise<CreateStaffJoinLinkResult> {
-  const maxUses = Math.min(Math.max(Math.trunc(input.maxUses), 1), STAFF_LINK_MAX_USES_CAP);
-  const days = Math.min(Math.max(Math.trunc(input.days), 1), STAFF_LINK_MAX_DAYS_CAP);
+  const role = normalizeStaffLinkRole(input.role);
+  const { maxUses, days } = clampStaffLink(role, {
+    maxUses: input.maxUses,
+    days: input.days,
+  });
   const token = generateToken();
   const expiresAt = new Date(Date.now() + days * 24 * 3_600_000);
 
   try {
     const row = await prisma.$transaction(async (tx) => {
       await tx.staffJoinLink.updateMany({
-        where: { organizationId: input.organizationId, isActive: true },
+        where: { organizationId: input.organizationId, isActive: true, role },
         data: { isActive: false },
       });
       return tx.staffJoinLink.create({
@@ -107,6 +116,7 @@ export async function createStaffJoinLink(input: {
           organizationId: input.organizationId,
           tokenHash: hashToken(token),
           label: input.label.trim(),
+          role,
           maxUses,
           expiresAt,
           createdByUserId: input.createdByUserId,
@@ -149,7 +159,13 @@ export async function closeStaffJoinLink(
 }
 
 export type StaffJoinState =
-  | { ok: true; linkId: string; organizationId: string; organizationName: string }
+  | {
+      ok: true;
+      linkId: string;
+      organizationId: string;
+      organizationName: string;
+      role: StaffLinkRole;
+    }
   | { ok: false; reason: "gecersiz" | "kapali" | "suresi-doldu" | "kota-doldu" };
 
 /** Kayıt sayfasının durum kontrolü — hesap açmadan önce. */
@@ -176,6 +192,7 @@ export async function resolveStaffJoinLink(token: string): Promise<StaffJoinStat
       linkId: link.id,
       organizationId: link.organization.id,
       organizationName: link.organization.name,
+      role: normalizeStaffLinkRole(link.role),
     };
   } catch (error) {
     console.error("[kadro-linki] çözülemedi", error);
@@ -187,7 +204,7 @@ export async function resolveStaffJoinLink(token: string): Promise<StaffJoinStat
 class JoinRefusal extends Error {}
 
 export type StaffSelfRegisterResult =
-  | { ok: true; userId: string; organizationId: string }
+  | { ok: true; userId: string; organizationId: string; role: StaffLinkRole }
   | { ok: false; error: string };
 
 const CLOSED_MESSAGE: Record<string, string> = {
@@ -230,10 +247,16 @@ export async function registerStaffViaLink(input: {
   const fullName = input.fullName.trim();
 
   try {
-    const userId = await prisma.$transaction(async (tx) => {
+    const created = await prisma.$transaction(async (tx) => {
       const fresh = await tx.staffJoinLink.findUnique({
         where: { id: state.linkId },
-        select: { usedCount: true, maxUses: true, isActive: true, expiresAt: true },
+        select: {
+          usedCount: true,
+          maxUses: true,
+          isActive: true,
+          expiresAt: true,
+          role: true,
+        },
       });
       if (
         !fresh ||
@@ -263,20 +286,27 @@ export async function registerStaffViaLink(input: {
         select: { id: true },
       });
 
-      // Rol sabit: bağlantıdan yönetici hesabı doğmaz.
+      // Rol bağlantının kendisinden, işlem içinde okunan değerden gelir; formdan
+      // rol alınmaz. Tanınmayan değer antrenöre iner.
+      const role = normalizeStaffLinkRole(fresh.role);
       await tx.organizationUser.create({
         data: {
           organizationId: state.organizationId,
           userId: user.id,
-          role: "coach",
+          role,
           status: "active",
         },
       });
 
-      return user.id;
+      return { id: user.id, role };
     });
 
-    return { ok: true, userId, organizationId: state.organizationId };
+    return {
+      ok: true,
+      userId: created.id,
+      organizationId: state.organizationId,
+      role: created.role,
+    };
   } catch (error) {
     if (error instanceof JoinRefusal) return { ok: false, error: error.message };
     // Aynı e-posta iki istekle aynı anda gelirse ikincisi benzersizlik kısıtına çarpar.

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { resolveStaffJoinLink } from "@/lib/queries/staff-join-links";
 import { getCurrentUser } from "@/lib/auth/guards";
+import { STAFF_LINK_ROLE_LABEL } from "@/domain/registration/staff-link";
 import { StaffRegisterForm } from "./StaffRegisterForm";
 
 export const metadata: Metadata = {
@@ -84,19 +85,20 @@ export default async function StaffJoinPage({
     <Shell>
       <div className="mt-6 rounded-sm border border-brand-border bg-brand-surface p-6">
         <span className="text-xs font-bold uppercase tracking-[0.2em] text-brand-yellow">
-          {link.organizationName} · Antrenör Kaydı
+          {link.organizationName} · {STAFF_LINK_ROLE_LABEL[link.role]} Kaydı
         </span>
         <h1 className="font-display mt-1 text-2xl uppercase tracking-wide text-brand-white">
-          Antrenör Hesabını Aç
+          {STAFF_LINK_ROLE_LABEL[link.role]} Hesabını Aç
         </h1>
         <p className="mt-2 text-xs leading-relaxed text-brand-muted">
           Adını, e-postanı ve şifreni kendin yaz — hesabın anında açılır.
-          Sporcuların kayıt olurken seni koç olarak seçebilmesi için
-          hesabının açık olması yeterli.
+          {link.role === "admin"
+            ? " Yönetici hesabı salonun tüm verisini ve ayarlarını görür; bu bağlantıyı kimseyle paylaşma."
+            : " Sporcuların kayıt olurken seni koç olarak seçebilmesi için hesabının açık olması yeterli."}
         </p>
 
         <div className="mt-6">
-          <StaffRegisterForm token={token} />
+          <StaffRegisterForm token={token} role={link.role} />
         </div>
       </div>
 

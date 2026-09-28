@@ -393,3 +393,22 @@ bağlantısından şifresini kur.
 - [ ] Çıkış yapıp uçak moduna geçince önceki sayfalar AÇILMIYOR (kişisel veri
       önbellekte kalmıyor).
 - [ ] Geliştirme modunda (`npm run dev`) service worker kaydedilmiyor.
+
+## Faz 18 — yönetici kayıt bağlantısı, tek dokunuşla üç grup listesi
+
+> Önce `npx prisma migrate deploy` (Faz 16 + bu fazın `role` sütunu).
+
+- [ ] `/yonetim/kayit-linki` → "Tüm Bağlantıları Hazırla" antrenör VE yönetici
+      bağlantısı üretiyor; altında sporcu + antrenör + yönetici adresleri tek
+      listede, "Listeyi Kopyala" çalışıyor.
+- [ ] "Yalnız Antrenör" yönetici bağlantısını KAPATMIYOR; "Yalnız Yönetici"
+      antrenör bağlantısını kapatmıyor. Aynı rolde yenisi eskisini kapatıyor.
+- [ ] Yönetici bağlantısı varsayılan **1 kişi / 3 gün**; kişi sayısına 4 ya da
+      gün sayısına 8 yazınca hata veriyor (üst sınır 3 kişi / 7 gün).
+- [ ] Yönetici bağlantısıyla kayıt: sayfa "Yönetici Hesabını Aç" diyor, hesap
+      açılınca `/yonetim`e düşüyor; yönetici menüsü açık.
+- [ ] Antrenör bağlantısıyla kayıt: "Antrenör Hesabını Aç", `/personel`e düşüyor,
+      `/yonetim` açılmıyor.
+- [ ] Yönetici bağlantısı tek kullanımdan sonra "Kontenjan doldu" diyor.
+- [ ] Yönetici olmayan biri bağlantı üretemiyor.
+- [ ] Faz 16'da üretilmiş bağlantılar (rol sütunu öncesi) antrenör olarak çalışıyor.

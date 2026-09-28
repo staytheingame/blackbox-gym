@@ -477,6 +477,35 @@ varken elle iş. Panel ayrıca telefona/bilgisayara uygulama gibi kurulamıyordu
 - Push bildirimi yok (bildirimler panel içi + e-posta/WhatsApp kanalı).
 - Çevrimdışı çalışma yok: uygulama internet ister.
 
+## Yapıldı (Faz 18 — yönetici kayıt bağlantısı, tek dokunuşla üç grup listesi)
+
+**Sorun:** Faz 16'da yönetici bağlantısı bilerek yapılmamıştı (yönetici yapmak
+kadro listesinden rol değiştirmekle oluyordu). Salon sahibi yöneticilerin de
+kendi bağlantısından gelmesini istedi; ayrıca sporcu/antrenör/yönetici
+bağlantıları tek tek üretilip ayrı ayrı toplanıyordu.
+
+- `StaffJoinLink.role` (coach | admin) — migration `20260928130000_kadro_linki_rol`,
+  tek `ADD COLUMN IF NOT EXISTS` (mevcut bağlantılar `coach` kalır; aynı SQL
+  Supabase SQL düzenleyicisinden elle çalıştırılsa da `migrate deploy` bozulmaz).
+- Yönetici bağlantısı **çok daha dar**: varsayılan 1 kişi / 3 gün, en fazla
+  3 kişi / 7 gün (antrenör: 10 / 14, en fazla 50 / 30). Kurallar saf ve testli:
+  `src/domain/registration/staff-link.ts`. Tanınmayan rol değeri **antrenöre
+  iner, asla yöneticiye çıkmaz**; rol formdan değil bağlantıdan, transaction
+  içinde okunur.
+- Yeni bağlantı yalnız AYNI roldeki öncekini kapatır.
+- `/yonetim/kayit-linki`: "Tüm Bağlantıları Hazırla" antrenör + yönetici üretir;
+  sporcu adresleriyle birlikte tek "Gönderilecek liste" (`composeLinkList`),
+  tek dokunuşla kopyalanır. Yalnız birini üretme düğmeleri ve kişi/gün ayarı
+  kapalı bir bölümde.
+- `/kadro-kayit/<token>`: sayfa ve düğme role göre "Antrenör"/"Yönetici";
+  kayıttan sonra rolün paneline (`homePathForRole`) düşer.
+
+### Açık
+- Adresler yalnız üretildiği anda görünür (yalnız SHA-256 özeti saklı); kaybolursa
+  aynı rolde yenisi üretilir.
+- Bağlantılar veritabanına yazıldığı için bu ortamdan üretilemez; yöneticinin
+  panelde bir kez basması gerekir.
+
 ## Yapıldı (Faz 12 — koç kapsamı, tahsilat ve salon muhasebesi)
 
 Kullanıcı isteği: **"koç ekleme-üye ekleme, her koçun kendi üyesini görmesi

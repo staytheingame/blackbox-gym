@@ -1148,8 +1148,10 @@ model MemberRegistrationAnswer {
 //   - adres tahmin edilemez bir anahtardır; veritabanında yalnız SHA-256 özeti
 //     durur (`StaffInvite` ile aynı kural)
 //   - kalıcı değildir: son gün ve kullanım sınırı zorunludur
-//   - açtığı rol HER ZAMAN antrenördür — yönetici yapmak için kadro
-//     listesinden rol değiştirilir, bağlantıdan yönetici hesabı doğmaz
+//   - açtığı rol `role` alanında: coach (varsayılan) ya da admin. Yönetici
+//     bağlantısı çok daha dar tutulur (tek kişi, en fazla 3 kişi / 7 gün) ve
+//     bilinmeyen değer HİÇBİR ZAMAN yöneticiye yükselmez (bkz.
+//     src/domain/registration/staff-link.ts)
 // ─────────────────────────────────────────────────────────────
 model StaffJoinLink {
   id              String       @id @default(cuid())
@@ -1157,6 +1159,8 @@ model StaffJoinLink {
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   tokenHash       String       @unique
   label           String
+  /// coach | admin — bağlantıyla açılan hesabın rolü.
+  role            String       @default("coach")
   isActive        Boolean      @default(true)
   maxUses         Int
   usedCount       Int          @default(0)
