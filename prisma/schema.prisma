@@ -64,6 +64,7 @@ model Organization {
   staffInvites      StaffInvite[]
   memberJoinLinks   MemberJoinLink[]
   staffJoinLinks    StaffJoinLink[]
+  funnelLeads       FunnelLead[]
 
   payments           Payment[]
   expenses           Expense[]
@@ -1173,4 +1174,51 @@ model StaffJoinLink {
   updatedAt       DateTime     @updatedAt
 
   @@index([organizationId, isActive])
+}
+
+// ─────────────────────────────────────────────────────────────
+// BAŞVURU FUNNEL'I — sporcu olmadan önceki aşama
+//
+// Herkese açık `/basvuru` sayfasını dolduran aday: kimin için, ne ilgisi
+// (birebir 12/24 ders ya da grup bilgisi), hedefi, kendisi ve nasıl ulaşılacağı.
+// Sporcu (`Member`) DEĞİLDİR — hesap açmaz; personel `/personel/basvurular`
+// ekranında görür, arar, durumunu işler.
+//
+// status:          yeni | arandi | deneme | uye-oldu | olumsuz
+// interest:        birebir-12 | birebir-24 | grup   (src/domain/funnel/lead.ts)
+// forWhom:         kendim | cocugum
+// contactChannel:  whatsapp | telefon | eposta
+// `quotedPriceMinor`: başvuru anında gösterilen fiyat (kuruş) — fiyat sonradan
+// değişse de "o gün ne teklif edildi" kaybolmasın.
+// `age`: kendisi için başvuran kişinin, çocuk için başvuruda ÇOCUĞUN yaşı.
+// ─────────────────────────────────────────────────────────────
+model FunnelLead {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  status             String       @default("yeni")
+  interest           String
+  quotedPriceMinor   Int?
+  forWhom            String
+  fullName           String
+  email              String
+  phone              String
+  age                Int
+  childName          String?
+  occupationGroup    String?
+  dailyLoad          String?
+  goals              String[]     @default([])
+  preferredTimes     String[]     @default([])
+  contactChannel     String
+  contactTime        String?
+  note               String?
+  kvkkConsentAt      DateTime
+  marketingConsentAt DateTime?
+  source             String       @default("basvuru")
+  handledByUserId    String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, createdAt])
 }

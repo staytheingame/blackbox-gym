@@ -472,3 +472,40 @@ bağlantısından şifresini kur.
 - [ ] `goals` sütunu henüz YOKKEN kayıt olmak yine çalışıyor: meslek/yoğunluk/saatler
       kaydediliyor, hedefler denetim kaydındaki "Sporcu kayıt linkinden kaydoldu"
       satırında "Kayıt yanıtları: hedef: …" olarak duruyor; sporcu kartı hedefsiz açılıyor.
+
+## Faz 21 — başvuru funnel'ı (`/basvuru`) ve Başvurular ekranı
+
+> Önce kurulum SQL'i (yeni `FunnelLead` tablosu). Çalıştırılmadan da sayfa açılır ve
+> başvuru kaybolmaz: denetim kaydına "Başvuru geldi" satırı olarak düşer.
+
+### Herkese açık sayfa (`/basvuru`, oturumsuz)
+- [ ] Üç adım görünüyor: İlgin → Seni tanıyalım → Ulaşalım. Adımlar arası Devam/Geri çalışıyor.
+- [ ] Adım 1: "Kendim için / Çocuğum için", üç seçenek (Birebir 12 ders — 20.000 ₺,
+      Birebir 24 ders — 36.000 ₺ [ders başı 1.500 ₺], Grup dersleri hakkında bilgi almak
+      istiyorum), hedefler (çoklu).
+- [ ] Birebir seçeneklerinden biri seçilince "Birebir ders şartları" kutusu açılıyor
+      (antrenör eşliği, uzun dönem plan, ders saatleri, iptal kuralı, ödeme görüşmede).
+      Grup seçilince kutu kapanıyor.
+- [ ] Kimin için / seçenek / hedef seçmeden Devam ilerletmiyor; hedef boşsa "En az bir hedef seç.".
+- [ ] "Çocuğum için": adım 2'de "Çocuğunun adı" çıkıyor ve zorunlu; yaş "Çocuğunun yaşı"
+      (3–17). "Kendim için": "Yaşın" (12–90), çocuk adı yok.
+- [ ] Meslek grubu, günlük yoğunluk, tercih ettiği saatler opsiyonel.
+- [ ] Adım 3: e-posta, telefon, iletişim tercihi (WhatsApp'tan yazın [varsayılan] /
+      Telefonla arayın / E-posta ile dönün), ne zaman ulaşılsın, not, KVKK onayı zorunlu.
+- [ ] Geçersiz telefon/e-posta ile gönderince hata mesajı çıkıyor ve **yazılanlar silinmiyor**.
+- [ ] Başarılı gönderim `/basvuru/tesekkurler` sayfasına gidiyor.
+- [ ] Aynı kişi/aynı seçenekle 15 dakika içinde ikinci kez gönderince yeni satır açılmıyor.
+- [ ] Sayfa telefonda (375px) yatay kaydırma olmadan sığıyor.
+
+### Personel ekranı (`/personel/basvurular`)
+- [ ] Menüde Yönetim → Başvurular; yeni (aranmamış) başvuru varsa Yönetim'de sayı rozeti.
+- [ ] Üstte başvuru linki + kopyala/WhatsApp + QR; "QR'ı İndir (PNG)" dosyayı indiriyor.
+- [ ] Gönderilen test başvurusu listede: ad, seçenek + fiyat, kimin için + yaş, hedefler,
+      tercih (kanal · saat), telefon/e-posta, meslek/yoğunluk, saatler, not.
+- [ ] Tercih edilen kanalın düğmesi (WhatsApp / Ara / E-posta) vurgulu; WhatsApp
+      düğmesi doğru numarayı açıyor (90 ile başlayan).
+- [ ] Durum düğmeleri (Arandı, Deneme dersi, Üye oldu, Olumsuz) çalışıyor; süzgeç
+      çipleri sayıları gösteriyor; "Yeni" sayısı işlenince düşüyor.
+- [ ] Antrenör hesabında da liste görünüyor, **Sil yalnız yönetici** hesabında.
+- [ ] Yönetici Sil'i onaylayınca başvuru gidiyor (test başvurularını temizlemek için).
+- [ ] Tablo yokken ekran "veritabanı güncellemesini bekliyor" diyor, çökmüyor.

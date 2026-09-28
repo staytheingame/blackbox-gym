@@ -52,6 +52,7 @@ export type BadgeKey =
   | "pendingAttendance" // personel: yoklaması alınmamış geçmiş seans
   | "pendingInvites" // personel/yönetici: hesabını kurmamış davetli sporcu
   | "unassignedRegistrations" // yönetici: kayıt linkinden gelip antrenörü atanmamış
+  | "newLeads" // personel: başvuru sayfasından gelip henüz aranmamış aday
   | "pendingWaivers" // personel: onam/sağlık beyanı eksik sporcu
   | "rankReady" // personel: terfiye hazır sporcu
   | "checkInDue" // üye: bu haftanın kontrolü gönderilmedi
@@ -320,6 +321,8 @@ const STAFF_NAV: PanelNavItem[] = [
     href: "/personel/uyelikler",
     icon: ShieldIcon,
     roles: ["staff"],
+    // Yeni başvuru (henüz aranmamış aday) varsa menüde sayı görünür.
+    badgeKey: "newLeads",
     children: [
       {
         id: "yonetim-uyelikler",
@@ -343,7 +346,8 @@ const STAFF_NAV: PanelNavItem[] = [
         href: "/personel/basvurular",
         icon: InboxIcon,
         roles: ["staff"],
-        title: "Site Başvuruları",
+        title: "Başvurular",
+        badgeKey: "newLeads",
       },
       {
         id: "yonetim-duyurular",

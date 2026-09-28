@@ -568,6 +568,51 @@ kütlesi ekleme) gibi hedefini de yanıtlasın; bir ya da birden fazla seçebils
 ### Açık
 - Hedef sporcu listesinde süzgeç/rozet olarak henüz kullanılmıyor (yalnız kartta).
 
+## Yapıldı (Faz 21 — başvuru funnel'ı: `/basvuru` + Başvurular ekranı)
+
+**İstek:** Adaylar için test funnel'ı: birebir 12 ders 20.000 ₺, 24 ders 36.000 ₺, grup
+dersleri hakkında bilgi; birebir için şartlar; kendim için / çocuğum için; iletişim
+bilgileri, yaş, meslek grubu, yoğunluk; iletişim seçenekleri; cevaplar sistemde görünsün,
+tek link olsun.
+
+- **Herkese açık `/basvuru`** (oturumsuz, `noindex`): üç adım — (1) kimin için + seçenek +
+  hedef (çoklu), (2) kişi bilgileri, (3) iletişim tercihi. Birebir seçilince şartlar
+  kutusu açılır (`PRIVATE_LESSON_TERMS`). Teşekkür sayfası `/basvuru/tesekkurler`.
+- **İletişim seçenekleri:** WhatsApp'tan yazın / Telefonla arayın / E-posta ile dönün +
+  "ne zaman ulaşalım" (sabah / öğleden sonra / akşam).
+- `FunnelLead` tablosu (yalnız yeni tablo, migration `20260928170000_basvuru_funnel`):
+  seçenek, **başvuru anındaki fiyat** (`quotedPriceMinor`), kimin için, ad, e-posta,
+  telefon, yaş (kendisi için kendisinin, çocuk için çocuğun), çocuk adı, meslek grubu,
+  yoğunluk, hedefler, saatler, tercih edilen kanal/saat, not, KVKK/pazarlama izni, durum.
+- **`/personel/basvurular`** (eskiden boş iskeletti): başvuru linki + QR + PNG indirme,
+  durum süzgeci, her başvuruda tercih edilen kanalın düğmesi vurgulu (WhatsApp `wa.me`,
+  Ara, E-posta), durum işleme (Arandı / Deneme dersi / Üye oldu / Olumsuz), yönetici Sil.
+  Menüde "Yönetim" üstünde yeni başvuru sayısı rozeti.
+- **Kayıp güvencesi:** tablo yoksa başvuru denetim kaydına yazılır (kişi bilgileri dahil);
+  personel ekranı çökmez, "kurulum bekliyor" der.
+- **Spam:** bal küpü alanı (bot doldurursa sessizce "alındı" denir, kayıt yok), sunucu
+  doğrulaması (form elle bozulsa da geçmez), 15 dk içinde aynı e-posta/telefon+seçenek
+  tekrarında yeni satır açılmaz.
+- Form `action=` yerine `onSubmit` ile gönderilir: React 19 `action` bitince kontrolsüz
+  alanları SIFIRLAR; doğrulama hatasında kişinin yazdığı her şey silinirdi.
+- Telefon tek biçime getirilir (`05551112233`); yurt dışı numarası `+` ile korunur.
+- Saf mantık testli (`domain/funnel/lead.ts`, 31 test). Form davranışı (adımlar, koşullu
+  şartlar, çocuk alanları, hata sonrası veri korunması, gönderilen alanlar) geçici jsdom
+  testiyle 12/12 doğrulandı; kalıcı yapılmadı (jsdom + Testing Library bağımlılığı ister).
+
+### Açık / bilinçli yapılmayanlar
+- **Fiyatlar funnel'da sabittir** (`FUNNEL_OFFERS`); "Paket Fiyatları" ekranı (koçun
+  düzelttiği `MembershipPlan`) funnel metnini DEĞİŞTİRMEZ. Şartlar metni sahibin
+  cümlelerine ve sistemin gerçek kurallarına (iptal 3 saat, gelmeyen ders yanar) dayanır;
+  sahibi gözden geçirmeli.
+- Aday → üye dönüştürme yok (durum elle "Üye oldu" işaretlenir).
+- Public sitedeki **iletişim formu (`ContactForm`) hâlâ hiçbir yere kaydetmiyor**; aynı
+  tabloya bağlanabilir.
+- Personele anlık bildirim (e-posta/WhatsApp) yok; yalnız menü rozeti.
+- **Bilinen hata (kayıt formu):** `/katil/<slug>` de `action=` kullandığı için doğrulama
+  hatasında (ör. "Şifreler aynı değil") alanlar silinir. Funnel'daki `onSubmit` yöntemiyle
+  düzeltilebilir.
+
 ## Yapıldı (Faz 12 — koç kapsamı, tahsilat ve salon muhasebesi)
 
 Kullanıcı isteği: **"koç ekleme-üye ekleme, her koçun kendi üyesini görmesi
