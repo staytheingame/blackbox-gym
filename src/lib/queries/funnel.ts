@@ -62,7 +62,6 @@ export async function createFunnelLead(
       data: {
         organizationId,
         interest: lead.interest,
-        quotedPriceMinor: lead.quotedPriceMinor,
         forWhom: lead.forWhom,
         fullName: lead.fullName,
         email: lead.email,

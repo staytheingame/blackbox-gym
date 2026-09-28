@@ -17,6 +17,7 @@ import {
 import { countRankReady } from "@/lib/queries/ranks";
 import { countUnassignedSelfRegistered } from "@/lib/queries/join-links";
 import { countNewLeads } from "@/lib/queries/funnel";
+import { countNewStartLeads } from "@/lib/queries/start-leads";
 
 export type NavBadges = Partial<Record<BadgeKey, number>>;
 
@@ -25,6 +26,15 @@ export type NavBadges = Partial<Record<BadgeKey, number>>;
  * (Kong Academy'nin `nav-badges.ts` kuralı). Günlük sayaçlar bilerek rozet
  * değil: gürültü yaratıyordu.
  */
+/** İki formdan gelen, henüz aranmamış talepler. */
+async function countAllNewLeads(organizationId: string): Promise<number> {
+  const [funnel, start] = await Promise.all([
+    countNewLeads(organizationId),
+    countNewStartLeads(organizationId),
+  ]);
+  return funnel + start;
+}
+
 export async function fetchStaffBadges(
   scope: StaffScope,
   userId: string,
@@ -46,7 +56,7 @@ export async function fetchStaffBadges(
     countUnread(userId),
     countMembersWithPendingWaivers(scope),
     countRankReady(scope),
-    countNewLeads(scope.organizationId),
+    countAllNewLeads(scope.organizationId),
   ]);
 
   return {
@@ -92,12 +102,13 @@ export async function fetchAdminBadges(
   organizationId: string,
   userId: string,
 ): Promise<NavBadges> {
-  const [pendingInvites, unreadNotifications, unassignedRegistrations] =
+  const [pendingInvites, unreadNotifications, unassignedRegistrations, newLeads] =
     await Promise.all([
       countPendingInvites(organizationScope(organizationId)),
       countUnread(userId),
       countUnassignedSelfRegistered(organizationId),
+      countAllNewLeads(organizationId),
     ]);
 
-  return { pendingInvites, unreadNotifications, unassignedRegistrations };
+  return { pendingInvites, unreadNotifications, unassignedRegistrations, newLeads };
 }

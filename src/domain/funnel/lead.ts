@@ -18,38 +18,33 @@ import {
 
 // ── Teklif ────────────────────────────────────────────────────
 
+/**
+ * Teklifler. FİYAT BİLEREK YOK: sayfada fiyat gösterilmez ve başvuruya fiyat
+ * yazılmaz — fiyatı görüşmede konuşuruz. (İlk sürümde 12 ders 20.000 ₺ / 24 ders
+ * 36.000 ₺ vardı; sahibi vazgeçti.)
+ */
 export const FUNNEL_OFFERS = [
   {
     value: "birebir-12",
     kind: "birebir",
     label: "Birebir ders — 12 ders",
     sessions: 12,
-    priceMinor: 20_000 * 100,
   },
   {
     value: "birebir-24",
     kind: "birebir",
     label: "Birebir ders — 24 ders",
     sessions: 24,
-    priceMinor: 36_000 * 100,
   },
   {
     value: "grup",
     kind: "grup",
     label: "Grup dersleri hakkında bilgi almak istiyorum",
     sessions: null,
-    priceMinor: null,
   },
 ] as const;
 
 export type FunnelOffer = (typeof FUNNEL_OFFERS)[number]["value"];
-
-/** Ders başı fiyat (kuruş, yuvarlanmış); grup için `null`. */
-export function pricePerSessionMinor(offer: FunnelOffer): number | null {
-  const found = FUNNEL_OFFERS.find((item) => item.value === offer);
-  if (!found || found.sessions === null || found.priceMinor === null) return null;
-  return Math.round(found.priceMinor / found.sessions);
-}
 
 export function isBirebirOffer(offer: string): boolean {
   return FUNNEL_OFFERS.some(
@@ -66,7 +61,7 @@ export const PRIVATE_LESSON_TERMS: readonly string[] = [
   "İlk görüşmede hedefine ve gününe göre uzun dönemli bir antrenman planı oluşturulur.",
   "Ders saatlerini antrenörünle birlikte belirlersin; rezervasyonlarını panelden yönetirsin.",
   `Seansa ${CANCEL_CUTOFF_HOURS} saatten fazla varken iptal edebilirsin; daha geç kalan iptal edilemez ve gelinmeyen ders yanar.`,
-  "Başlangıç tarihi ve ödeme şekli görüşmede birlikte netleştirilir.",
+  "Başlangıç tarihi, fiyat ve ödeme şekli görüşmede birlikte netleştirilir.",
 ];
 
 // ── Seçenekler ────────────────────────────────────────────────
@@ -198,7 +193,6 @@ export type LeadInput = {
 export type ParsedLead = {
   forWhom: ForWhom;
   interest: FunnelOffer;
-  quotedPriceMinor: number | null;
   goals: string[];
   fullName: string;
   email: string;
@@ -330,7 +324,6 @@ export function parseFunnelLead(input: LeadInput): LeadParseResult {
     lead: {
       forWhom,
       interest: offer.value,
-      quotedPriceMinor: offer.priceMinor,
       goals,
       fullName: `${firstName} ${lastName}`,
       email,

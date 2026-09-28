@@ -613,6 +613,46 @@ tek link olsun.
   hatasında (ör. "Şifreler aynı değil") alanlar silinir. Funnel'daki `onSubmit` yöntemiyle
   düzeltilebilir.
 
+## Yapıldı (Faz 22 — "Sana Uygun Başlangıcı Bulalım" funnel'ı, fiyatsız)
+
+**İstek:** Fiyat yazılmasın (vazgeçildi); yerine sekiz soruluk tanışma funnel'ı, ayrı link;
+formu dolduranlar yönetici panelinde görünsün.
+
+- **`/baslangic`** (oturumsuz, `noindex`): ekranda tek soru + "Soru N / 8" + ilerleme çubuğu.
+  Sorular ve seçenek metinleri sahibinin yazdığı gibi (`domain/funnel/start.ts` — TEK kaynak:
+  form, doğrulama ve yönetici ekranı buradan okur). İlk 5 tek seçimli soruda seçince kendiliğinden
+  ilerler; 6. (beklentiler) ve 8. (zamanlar) çoklu; 7. meslek + günlük yoğunluk; sonda Ad Soyad,
+  Telefon, E-posta ve "GÖRÜŞME TALEBİ OLUŞTUR". Teşekkür sayfası `/baslangic/tesekkurler`.
+- **`StartLead` tablosu** (yalnız yeni tablo, migration `20260928190000_baslangic_formu`): çekirdek
+  alanlar sütun (ad, telefon, e-posta, durum), sekiz sorunun yanıtları `answers` JSON'unda —
+  soru metinleri sık değişeceği için her değişiklik migration istemesin. Eski/bozuk JSON ekranı
+  çökertmez (`readStartAnswers`).
+- **FİYAT KALDIRILDI** ilk funnel'dan (`/basvuru`) da: sayfada gösterilmiyor, başvuruya yazılmıyor
+  (`quotedPriceMinor` artık doldurulmuyor, sütun eski kayıtlar için duruyor; eski kayıtlarda rozet çıkabilir).
+  Şartlar metni "başlangıç tarihi, **fiyat** ve ödeme şekli görüşmede netleşir" diyor.
+- **Başvurular ekranı iki formu tek listede toplar** (`components/panel/LeadsInbox.tsx`): koç
+  `/personel/basvurular`, **yönetici `/yonetim/basvurular`** (yönetici menüsüne "Başvurular" +
+  rozet eklendi). Kaynak etiketi, durum işleme, WhatsApp/Ara/E-posta düğmeleri, iki form için
+  bağlantı + QR + PNG (`/personel/basvurular/qr?form=baslangic|basvuru`, yalnız bilinen iki yol).
+  Durum/silme eylemleri `kind` alır.
+- Menü rozeti iki formun "yeni" toplamı. Tablo yoksa ilgili kaynak atlanır, diğeri çalışır.
+- **Kayıp güvencesi ve spam:** ilk funnel'la aynı (tablo yoksa denetim kaydı; bal küpü; sunucu
+  doğrulaması; 15 dk tekrar gönderim tekilleştirme; `onSubmit` ile hata sonrası veri korunur).
+- Doğrulama: alan mantığı 22 yeni test (toplam 52); form davranışı geçici jsdom testiyle 13/13
+  (otomatik ilerleme, Geri, çoklu seçim kuralı, son adım, gönderilen alanlar, hata sonrası veri
+  korunması, fiyat yok); kalıcı yapılmadı (jsdom + Testing Library bağımlılığı ister). SQL yerel
+  Postgres'te dört durumda denendi.
+
+### Açık / bilinçli yapılmayanlar
+- **KVKK:** sahibinin metnine ek olarak düğmenin altına küçük bir bilgilendirme satırı ("Butona
+  basarak … işlenmesini kabul edersin") eklendi; onay kutusu YOK. Tam aydınlatma metni bağlantısı
+  sahibinden istenmeli.
+- İlk funnel (`/basvuru`) duruyor (fiyatsız); istenirse kapatılabilir. İki funnel ayrı tablolarda.
+- Aday → üye dönüştürme yok (durum elle "Üye oldu"). Anlık bildirim yok (yalnız menü rozeti).
+- Sitedeki eski **İletişim formu hâlâ hiçbir yere kaydetmiyor**.
+- **Bilinen hata (kayıt formu):** `/katil/<slug>` hâlâ `action=` kullanıyor; doğrulama hatasında
+  alanlar siliniyor. Funnel'lardaki `onSubmit` yöntemiyle düzeltilebilir.
+
 ## Yapıldı (Faz 12 — koç kapsamı, tahsilat ve salon muhasebesi)
 
 Kullanıcı isteği: **"koç ekleme-üye ekleme, her koçun kendi üyesini görmesi

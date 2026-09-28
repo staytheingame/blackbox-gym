@@ -5,7 +5,6 @@ import {
   isBirebirOffer,
   normalizePhone,
   parseFunnelLead,
-  pricePerSessionMinor,
   summarizeLead,
   toWhatsAppNumber,
   type LeadInput,
@@ -42,25 +41,29 @@ function err(overrides: Partial<LeadInput>) {
 }
 
 describe("teklifler", () => {
-  it("birebir 12 ders 20.000 ₺, 24 ders 36.000 ₺", () => {
-    const price = (value: string) =>
-      FUNNEL_OFFERS.find((offer) => offer.value === value)?.priceMinor;
-
-    expect(price("birebir-12")).toBe(2_000_000);
-    expect(price("birebir-24")).toBe(3_600_000);
+  it("üç seçenek var: birebir 12, birebir 24 ve grup bilgisi", () => {
+    expect(FUNNEL_OFFERS.map((offer) => offer.value)).toEqual([
+      "birebir-12",
+      "birebir-24",
+      "grup",
+    ]);
   });
 
-  it("grup seçeneğinin fiyatı ve ders adedi yok", () => {
-    const grup = FUNNEL_OFFERS.find((offer) => offer.value === "grup");
+  it("FİYAT YOK: teklif nesnelerinde de başvuru sonucunda da fiyat alanı bulunmaz", () => {
+    for (const offer of FUNNEL_OFFERS) {
+      expect(Object.keys(offer)).not.toContain("priceMinor");
+    }
+    expect(JSON.stringify(FUNNEL_OFFERS)).not.toMatch(/20000|36000|20\.000|36\.000/);
 
-    expect(grup?.priceMinor).toBeNull();
-    expect(grup?.sessions).toBeNull();
-    expect(pricePerSessionMinor("grup")).toBeNull();
+    const lead = parseFunnelLead(valid);
+    expect(lead.ok && "quotedPriceMinor" in lead.lead).toBe(false);
   });
 
-  it("ders başı fiyatı doğru hesaplar: 12 derste ≈1.667 ₺, 24 derste 1.500 ₺", () => {
-    expect(pricePerSessionMinor("birebir-12")).toBe(166_667);
-    expect(pricePerSessionMinor("birebir-24")).toBe(150_000);
+  it("şartlar fiyat rakamı vermez, fiyatın görüşmede netleşeceğini söyler", () => {
+    const text = PRIVATE_LESSON_TERMS.join(" ");
+
+    expect(text).not.toMatch(/₺|TL|\d\.\d{3}/);
+    expect(text).toContain("fiyat");
   });
 
   it("yalnız birebir seçenekleri birebir sayılır", () => {
@@ -129,12 +132,6 @@ describe("parseFunnelLead — geçerli başvuru", () => {
     expect(lead.phone).toBe("05551112233");
     expect(lead.age).toBe(32);
     expect(lead.childName).toBeNull();
-    expect(lead.quotedPriceMinor).toBe(2_000_000);
-  });
-
-  it("teklif anındaki fiyatı başvuruya kopyalar; grupta fiyat yok", () => {
-    expect(ok({ interest: "birebir-24" }).quotedPriceMinor).toBe(3_600_000);
-    expect(ok({ interest: "grup" }).quotedPriceMinor).toBeNull();
   });
 
   it("çocuk için başvuruda çocuğun adı ve yaşı alınır", () => {

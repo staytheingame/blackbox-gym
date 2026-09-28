@@ -509,3 +509,40 @@ bağlantısından şifresini kur.
 - [ ] Antrenör hesabında da liste görünüyor, **Sil yalnız yönetici** hesabında.
 - [ ] Yönetici Sil'i onaylayınca başvuru gidiyor (test başvurularını temizlemek için).
 - [ ] Tablo yokken ekran "veritabanı güncellemesini bekliyor" diyor, çökmüyor.
+
+## Faz 22 — "Sana Uygun Başlangıcı Bulalım" (`/baslangic`), fiyatsız, tek Başvurular listesi
+
+> Önce kurulum SQL'i (yeni `StartLead` tablosu; ilk başvuru tablosunu da içerir). Çalıştırılmadan
+> da sayfa açılır ve talep kaybolmaz: denetim kaydına "Görüşme talebi geldi" satırı olarak düşer.
+
+### Herkese açık sayfa (`/baslangic`, oturumsuz)
+- [ ] Başlık "Sana Uygun Başlangıcı Bulalım", altında "Seni, hedefini ve günlük hayatını biraz
+      tanıyalım. / Yaklaşık 1 dakika sürer."
+- [ ] Ekranda TEK soru, üstte "Soru N / 8" ve ilerleme çubuğu.
+- [ ] 1–5. sorularda (hedef, rahatsız eden, engel, spor geçmişi, soğutan) bir seçenek
+      seçince kendiliğinden sonraki soruya geçiyor; Geri düğmesi önceki soruya dönüyor ve seçim korunuyor.
+- [ ] 6. soru (beklentiler) çoklu: "Birden fazla seçebilirsin."; hiçbiri işaretli değilken Devam
+      "En az bir seçenek işaretle." diyor.
+- [ ] 7. ekran: Mesleğin (yazı) + Günlük yoğunluğun (5 seçenek); ikisi de zorunlu.
+- [ ] 8. ekran: uygun zamanlar (5 seçenek, çoklu) + "Haftada gerçekçi olarak:" (2 gün / 3 gün /
+      4+ gün / Programıma göre değişir); gün seçilmeden ilerlemiyor.
+- [ ] Son adım: Ad Soyad, Telefon, E-posta ve "GÖRÜŞME TALEBİ OLUŞTUR" düğmesi; altında
+      "Bilgilerini ve cevaplarını inceleyip sana uygun başlangıcı görüşmede birlikte belirleyeceğiz."
+      ve küçük bilgilendirme (işlenmesini kabul edersin).
+- [ ] Tek sözcüklü ad, geçersiz telefon/e-posta ile hata mesajı çıkıyor ve **yazılanlar/seçimler silinmiyor**.
+- [ ] Başarılı gönderim `/baslangic/tesekkurler`e gidiyor.
+- [ ] Aynı kişi 15 dakika içinde tekrar gönderirse ikinci satır açılmıyor.
+- [ ] Sayfanın HİÇBİR yerinde fiyat yok.
+
+### Başvurular ekranı (koç `/personel/basvurular`, yönetici `/yonetim/basvurular`)
+- [ ] Yönetici menüsünde **Başvurular** var; aranmamış talep varsa rozet sayısı.
+- [ ] Üstte iki form bağlantısı (Başlangıç formu, Başvuru formu): kopyala/WhatsApp, QR, PNG indirme, Sayfayı Aç.
+- [ ] Gönderilen test talebi listede "Başlangıç formu" etiketiyle: ad, tarih, telefon, e-posta ve on
+      satır yanıt (Ana hedef, En çok rahatsız eden, En büyük engel, Spor geçmişi, Antrenmanda
+      soğutan, Beklentiler, Meslek, Günlük yoğunluk, Uygun zamanlar, Haftada).
+- [ ] WhatsApp / Ara / E-posta düğmeleri çalışıyor (WhatsApp vurgulu; doğru numara, 90 ile).
+- [ ] Durum düğmeleri (Arandı, Deneme dersi, Üye oldu, Olumsuz) çalışıyor; süzgeç çipleri iki formun toplamını sayıyor.
+- [ ] İki formdan gelenler tek listede, tarihe göre karışık sıralı.
+- [ ] Sil yalnız yönetici hesabında; koçta yok.
+- [ ] Eski `/basvuru` formundan yeni gelen kayıtta fiyat rozeti YOK (eski kayıtlarda olabilir).
+- [ ] Bir tablo kurulmamışsa ekran çökmüyor, o kaynağı atlayıp uyarı satırı gösteriyor.

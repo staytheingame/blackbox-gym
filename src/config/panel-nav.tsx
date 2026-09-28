@@ -713,6 +713,18 @@ const ADMIN_NAV: PanelNavItem[] = [
   },
 
   {
+    id: "yonetici-basvurular",
+    label: "Başvurular",
+    href: "/yonetim/basvurular",
+    icon: InboxIcon,
+    roles: ["admin"],
+    shortLabel: "Başvuru",
+    // Formları dolduranlar (aranmamış olanların sayısı rozet olur).
+    badgeKey: "newLeads",
+    title: "Başvurular — Formları Dolduranlar",
+  },
+
+  {
     id: "yonetici-paketler",
     label: "Paketler",
     href: "/yonetim/paketler",

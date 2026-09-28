@@ -21,9 +21,7 @@ import {
   PREFERRED_TIME_OPTIONS,
   PRIVATE_LESSON_TERMS,
   isBirebirOffer,
-  pricePerSessionMinor,
 } from "@/domain/funnel/lead";
-import { formatMinorTR } from "@/domain/finance/money";
 
 const STEPS = ["İlgin", "Seni tanıyalım", "Ulaşalım"] as const;
 
@@ -156,34 +154,20 @@ export function FunnelForm() {
         <div>
           <span className={labelClass}>Ne ile ilgileniyorsun?</span>
           <div className="mt-2 space-y-2">
-            {FUNNEL_OFFERS.map((offer) => {
-              const perSession = pricePerSessionMinor(offer.value);
-              return (
-                <label key={offer.value} className={`${choiceClass} items-start py-3`}>
-                  <input
-                    type="radio"
-                    name="interest"
-                    value={offer.value}
-                    required
-                    checked={interest === offer.value}
-                    onChange={() => setInterest(offer.value)}
-                    className="mt-0.5 h-5 w-5 shrink-0 accent-brand-yellow"
-                  />
-                  <span className="flex-1">
-                    <span className="block font-semibold">{offer.label}</span>
-                    {offer.priceMinor !== null && (
-                      <span className="mt-0.5 block text-xs text-brand-muted">
-                        <span className="font-semibold text-brand-yellow">
-                          {formatMinorTR(offer.priceMinor)}
-                        </span>
-                        {perSession !== null &&
-                          ` · ders başı ${formatMinorTR(perSession)}`}
-                      </span>
-                    )}
-                  </span>
-                </label>
-              );
-            })}
+            {FUNNEL_OFFERS.map((offer) => (
+              <label key={offer.value} className={choiceClass}>
+                <input
+                  type="radio"
+                  name="interest"
+                  value={offer.value}
+                  required
+                  checked={interest === offer.value}
+                  onChange={() => setInterest(offer.value)}
+                  className="h-5 w-5 shrink-0 accent-brand-yellow"
+                />
+                <span className="font-semibold">{offer.label}</span>
+              </label>
+            ))}
           </div>
 
           {isBirebirOffer(interest) && (

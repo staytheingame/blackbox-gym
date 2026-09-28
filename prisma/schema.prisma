@@ -65,6 +65,7 @@ model Organization {
   memberJoinLinks   MemberJoinLink[]
   staffJoinLinks    StaffJoinLink[]
   funnelLeads       FunnelLead[]
+  startLeads        StartLead[]
 
   payments           Payment[]
   expenses           Expense[]
@@ -1188,8 +1189,8 @@ model StaffJoinLink {
 // interest:        birebir-12 | birebir-24 | grup   (src/domain/funnel/lead.ts)
 // forWhom:         kendim | cocugum
 // contactChannel:  whatsapp | telefon | eposta
-// `quotedPriceMinor`: başvuru anında gösterilen fiyat (kuruş) — fiyat sonradan
-// değişse de "o gün ne teklif edildi" kaybolmasın.
+// `quotedPriceMinor`: KULLANILMIYOR. İlk sürümde başvuru anındaki fiyat buraya
+// yazılıyordu; fiyat gösterimi kaldırıldı, sütun eski kayıtlar için duruyor.
 // `age`: kendisi için başvuran kişinin, çocuk için başvuruda ÇOCUĞUN yaşı.
 // ─────────────────────────────────────────────────────────────
 model FunnelLead {
@@ -1218,6 +1219,42 @@ model FunnelLead {
   handledByUserId    String?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
+
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// BAŞLANGIÇ FORMU — "Sana Uygun Başlangıcı Bulalım" (`/baslangic`)
+//
+// Sekiz soruluk tanışma funnel'ı: hedef, rahatsızlık, engel, spor geçmişi,
+// antrenmanda soğutan şey, beklenti, meslek/yoğunluk, uygun zamanlar. Fiyat yok;
+// çıktı bir GÖRÜŞME TALEBİdir. Sporcu (`Member`) değildir — hesap açmaz.
+//
+// Yanıtlar `answers` JSON'unda durur (şekli: src/domain/funnel/start.ts →
+// `StartAnswers`): soru metinleri sık değişebilecek bir metin olduğu için her
+// değişiklik migration istemesin. Çekirdek alanlar (ad, telefon, e-posta, durum)
+// sütun olarak durur: arama, süzme ve iletişim düğmeleri bunlara bakar.
+//
+// `FunnelLead` (fiyat/seçenek sorulan ilk funnel) ile AYRI tablodur; iki funnel'ın
+// başvuruları yönetici ekranında birlikte listelenir.
+//
+// status: yeni | arandi | deneme | uye-oldu | olumsuz
+// ─────────────────────────────────────────────────────────────
+model StartLead {
+  id               String       @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  status           String       @default("yeni")
+  fullName         String
+  phone            String
+  email            String
+  answers          Json
+  /// Formdaki bilgilendirme metni gösterilerek gönderildiği an.
+  noticeAcceptedAt DateTime
+  handledByUserId  String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
   @@index([organizationId, status, createdAt])
   @@index([organizationId, createdAt])
